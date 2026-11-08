@@ -1,7 +1,15 @@
 import axios from 'axios';
 
+export const normalizeApiBaseUrl = (value) => {
+  const configuredUrl = value?.trim().replace(/\/+$/, '');
+  if (!configuredUrl) return '/api';
+
+  const backendOrigin = configuredUrl.replace(/(?:\/api)+$/i, '');
+  return `${backendOrigin}/api`;
+};
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || '/api',
+  baseURL: normalizeApiBaseUrl(import.meta.env.VITE_API_URL),
   headers: {
     'Content-Type': 'application/json',
   },
@@ -25,7 +33,8 @@ api.interceptors.response.use(
   (error) => {
     if (error.response && error.response.status === 401) {
       // If expired, clear token
-      const isAuthEndpoint = error.config.url.includes('/auth/login') || error.config.url.includes('/auth/register');
+      const requestUrl = error.config?.url || '';
+      const isAuthEndpoint = requestUrl.includes('/auth/login') || requestUrl.includes('/auth/register');
       if (!isAuthEndpoint) {
         localStorage.removeItem('medisync_token');
         localStorage.removeItem('medisync_user');

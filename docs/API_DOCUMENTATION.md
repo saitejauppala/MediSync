@@ -1,6 +1,6 @@
 # MediSync REST API Documentation
 
-Base URL: `http://localhost:5000/api`
+Base URL: `https://<backend-origin>/api` (locally, use the backend origin configured for development).
 
 The production API uses the configured Railway backend origin. Validation failures use a `400` response; unexpected production errors do not expose stack traces or internal messages.
 

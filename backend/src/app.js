@@ -36,7 +36,14 @@ app.use(cors({
     const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
       .split(',')
       .map((value) => value.trim())
-      .filter(Boolean);
+      .filter(Boolean)
+      .map((value) => {
+        try {
+          return new URL(value).origin;
+        } catch {
+          return value;
+        }
+      });
 
     return callback(null, allowedOrigins.includes(origin));
   },

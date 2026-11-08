@@ -40,11 +40,20 @@ Railway supplies `PORT`; the server binds to `0.0.0.0`. Production startup fails
   - Build: `npm ci && npm run build`
   - Start: `npm run start`
   - Health check: `/`
-- Set `VITE_API_BASE_URL` before the build to `https://<backend-public-domain>/api` (`VITE_API_URL` remains supported for existing setups).
+- Set `VITE_API_URL` before the build to the backend HTTPS origin, without an `/api` suffix (for example, `https://<backend-public-domain>`). The API client appends and normalizes `/api`.
 - Generate a frontend Railway public domain.
-- Update backend `FRONTEND_URL` with the exact frontend origin and redeploy the backend if needed.
+- Set backend `FRONTEND_URL` to the exact frontend HTTPS origin (for example, `https://energetic-patience-production-3e23.up.railway.app`) and redeploy the backend if needed. Bearer-token authentication does not use cross-origin cookies, so credentialed CORS requests are not enabled.
 
 Vite embeds the API base URL during the frontend build. It must not contain secrets.
+
+For the currently deployed MediSync services, configure:
+
+| Service | Variable | Value |
+|---|---|---|
+| Frontend | `VITE_API_URL` | `https://medisync-production-d996.up.railway.app` |
+| Backend | `FRONTEND_URL` | `https://energetic-patience-production-3e23.up.railway.app` |
+
+Keep existing backend secrets and database/geocoding variables unchanged when applying these values.
 
 ## 4. Verify deployment
 
