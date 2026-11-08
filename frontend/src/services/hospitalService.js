@@ -12,6 +12,18 @@ export const hospitalService = {
     return res.data;
   },
 
+  async searchLocations(q) {
+    const res = await api.get('/location/search', { params: { q } });
+    return res.data;
+  },
+
+  async reverseGeocode(latitude, longitude) {
+    const res = await api.get('/location/reverse', {
+      params: { latitude, longitude },
+    });
+    return res.data;
+  },
+
   async searchHospitals(q) {
     const res = await api.get('/hospitals/search', { params: { q } });
     return res.data;

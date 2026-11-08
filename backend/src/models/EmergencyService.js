@@ -22,7 +22,7 @@ const emergencyServiceSchema = new mongoose.Schema(
     traumaLevel: {
       type: String,
       enum: ['Level 1 Comprehensive', 'Level 2 Major Trauma', 'Level 3 General Trauma', 'Basic Emergency Response'],
-      default: 'Level 2 Major Trauma',
+      default: undefined,
     },
     helipadAvailable: {
       type: Boolean,
@@ -30,7 +30,7 @@ const emergencyServiceSchema = new mongoose.Schema(
     },
     bloodBankAvailable: {
       type: Boolean,
-      default: true,
+      default: false,
     },
     burnUnitAvailable: {
       type: Boolean,
@@ -38,20 +38,20 @@ const emergencyServiceSchema = new mongoose.Schema(
     },
     strokeCenterReady: {
       type: Boolean,
-      default: true,
+      default: false,
     },
     cardiacEmergencyReady: {
       type: Boolean,
-      default: true,
+      default: false,
     },
     pediatricEmergencyReady: {
       type: Boolean,
-      default: true,
+      default: false,
     },
     operatingStatus: {
       type: String,
       enum: ['Open 24/7', 'Daytime Emergency Only', 'On-Call Only'],
-      default: 'Open 24/7',
+      default: undefined,
     },
     disclaimer: {
       type: String,
@@ -64,4 +64,3 @@ const emergencyServiceSchema = new mongoose.Schema(
 );
 
 module.exports = mongoose.model('EmergencyService', emergencyServiceSchema);
-

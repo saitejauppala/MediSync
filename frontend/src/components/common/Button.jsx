@@ -12,7 +12,7 @@ export const Button = ({
   icon: Icon = null,
   ...props
 }) => {
-  const baseStyles = 'inline-flex items-center justify-center font-medium rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#090909] disabled:opacity-50 disabled:cursor-not-allowed select-none';
+  const baseStyles = 'inline-flex items-center justify-center font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#090909] disabled:opacity-50 disabled:cursor-not-allowed select-none active:scale-[0.98]';
 
   const sizes = {
     sm: 'px-3 py-1.5 text-xs gap-1.5',
@@ -21,11 +21,11 @@ export const Button = ({
   };
 
   const variants = {
-    primary: 'bg-red-500 hover:bg-red-600 text-white focus:ring-red-500 shadow-md shadow-red-500/20 active:scale-[0.98]',
-    secondary: 'bg-[#171717] hover:bg-[#202020] text-white border border-[#303030] focus:ring-[#505050]',
-    outline: 'border border-red-500 text-red-500 hover:bg-red-950/40 focus:ring-red-500',
-    ghost: 'text-text-secondary hover:text-white hover:bg-[#171717]',
-    danger: 'bg-red-700 hover:bg-red-800 text-white focus:ring-red-700',
+    primary: 'bg-white hover:bg-[#d4d4d4] text-[#090909] focus:ring-[#a3a3a3]',
+    secondary: 'bg-[#171717] hover:bg-[#262626] text-white border border-[#333333] focus:ring-[#737373]',
+    outline: 'border border-[#404040] text-white hover:bg-[#171717] focus:ring-[#737373]',
+    ghost: 'text-[#a3a3a3] hover:text-white hover:bg-[#171717]',
+    danger: 'bg-[#262626] hover:bg-[#333333] text-white focus:ring-[#737373]',
   };
 
   return (

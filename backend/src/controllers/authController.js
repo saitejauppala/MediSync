@@ -1,12 +1,13 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { recordAuditLog } = require('../middleware/audit');
+const { JWT_SECRET, JWT_EXPIRE } = require('../config/environment');
 
 const generateToken = (id) => {
   return jwt.sign(
     { id },
-    process.env.JWT_SECRET || 'medisync_super_secret_jwt_key_2026',
-    { expiresIn: process.env.JWT_EXPIRE || '30d' }
+    JWT_SECRET,
+    { expiresIn: JWT_EXPIRE }
   );
 };
 
@@ -302,4 +303,3 @@ module.exports = {
   toggleSaveHospital,
   logout,
 };
-

@@ -1,4 +1,5 @@
 module.exports = {
+  CITY_NAME: 'Vijayawada',
   ROLES: {
     PATIENT: 'patient',
     HOSPITAL_ADMIN: 'hospital_admin',

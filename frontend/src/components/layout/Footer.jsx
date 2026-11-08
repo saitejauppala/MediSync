@@ -36,18 +36,18 @@ const Footer = () => {
           {/* Brand Info */}
           <div className="space-y-4 md:col-span-1">
             <div className="flex items-center space-x-3">
-              <div className="w-9 h-9 rounded-xl bg-red-600 flex items-center justify-center shadow-lg shadow-red-500/20">
-                <Heart className="w-5 h-5 text-white fill-white" />
+              <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center">
+                <Heart className="w-5 h-5 text-black fill-black" />
               </div>
               <span className="text-xl font-bold tracking-tight text-white">
-                Medi<span className="text-red-500">Sync</span>
+                Medi<span className="text-[#a3a3a3]">Sync</span>
               </span>
             </div>
             <p className="text-xs text-text-secondary leading-relaxed">
-              Healthcare, closer than ever. Full-stack healthcare discovery and hospital navigation platform connecting patients to certified facilities, emergency units, and bed availability.
+              Healthcare discovery and hospital navigation for Vijayawada. Community-sourced entries are clearly marked and should be confirmed before travel.
             </p>
             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#171717] border border-[#303030] text-[11px] text-text-secondary">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+              <span className="w-2 h-2 rounded-full bg-[#a3a3a3]"></span>
               <span>All Systems Operational</span>
             </div>
           </div>
@@ -152,10 +152,19 @@ const Footer = () => {
 
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-[#303030] flex flex-col md:flex-row items-center justify-between gap-4 text-xs">
-          <p>© {new Date().getFullYear()} MediSync Platform. All healthcare data strictly verified and reported.</p>
+          <p>© {new Date().getFullYear()} MediSync. Facility details and availability can change; confirm directly before travel.</p>
           <div className="flex items-center space-x-4 text-text-secondary">
+            <a
+              href="https://www.openstreetmap.org/copyright"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 hover:text-white"
+            >
+              OpenStreetMap contributors · ODbL
+              <ExternalLink className="h-3 w-3" />
+            </a>
             <span className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+              <span className="w-1.5 h-1.5 rounded-full bg-[#a3a3a3]"></span>
               Built on MERN (MongoDB Atlas • Express • React • Node.js)
             </span>
           </div>

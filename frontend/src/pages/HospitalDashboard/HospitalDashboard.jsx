@@ -18,21 +18,23 @@ import hospitalService from '../../services/hospitalService';
 import { StatusBadge } from '../../components/common/Badge';
 import Button from '../../components/common/Button';
 import Modal from '../../components/common/Modal';
+import { useToast } from '../../context/ToastContext';
 
 export const HospitalDashboard = () => {
   const { user } = useAuth();
+  const notify = useToast();
   const [hospital, setHospital] = useState(null);
   const [appointments, setAppointments] = useState([]);
   const [bedForm, setBedForm] = useState({
-    totalBeds: 100,
-    occupiedBeds: 60,
-    availableBeds: 40,
-    icuTotal: 20,
-    icuAvailable: 6,
-    oxygenTotal: 40,
-    oxygenAvailable: 15,
-    ventilatorTotal: 10,
-    ventilatorAvailable: 3,
+    totalBeds: '',
+    occupiedBeds: '',
+    availableBeds: '',
+    icuTotal: '',
+    icuAvailable: '',
+    oxygenTotal: '',
+    oxygenAvailable: '',
+    ventilatorTotal: '',
+    ventilatorAvailable: '',
   });
 
   const [activeTab, setActiveTab] = useState('beds'); // 'beds' | 'appointments' | 'profile'
@@ -50,10 +52,15 @@ export const HospitalDashboard = () => {
   const loadHospitalData = async () => {
     setLoading(true);
     try {
-      const res = await hospitalService.getHospitals({ limit: 1 });
-      if (res.success && res.hospitals.length > 0) {
-        // Use user's managed hospital or first hospital
-        const targetHosp = res.hospitals[0];
+      const managedHospitalId = typeof user?.managedHospital === 'string'
+        ? user.managedHospital
+        : user?.managedHospital?._id;
+      const res = managedHospitalId
+        ? await hospitalService.getHospitalById(managedHospitalId)
+        : await hospitalService.getHospitals({ limit: 1, isVerified: 'true' });
+      const targetHosp = managedHospitalId ? res.hospital : res.hospitals?.[0];
+
+      if (res.success && targetHosp) {
         setHospital(targetHosp);
 
         if (targetHosp.bedInventory) {
@@ -62,12 +69,24 @@ export const HospitalDashboard = () => {
             totalBeds: b.totalBeds,
             occupiedBeds: b.occupiedBeds,
             availableBeds: b.availableBeds,
-            icuTotal: b.icuBeds?.total || 20,
-            icuAvailable: b.icuBeds?.available || 6,
-            oxygenTotal: b.oxygenBeds?.total || 40,
-            oxygenAvailable: b.oxygenBeds?.available || 15,
-            ventilatorTotal: b.ventilatorBeds?.total || 10,
-            ventilatorAvailable: b.ventilatorBeds?.available || 3,
+            icuTotal: b.icuBeds?.total ?? '',
+            icuAvailable: b.icuBeds?.available ?? '',
+            oxygenTotal: b.oxygenBeds?.total ?? '',
+            oxygenAvailable: b.oxygenBeds?.available ?? '',
+            ventilatorTotal: b.ventilatorBeds?.total ?? '',
+            ventilatorAvailable: b.ventilatorBeds?.available ?? '',
+          });
+        } else {
+          setBedForm({
+            totalBeds: '',
+            occupiedBeds: '',
+            availableBeds: '',
+            icuTotal: '',
+            icuAvailable: '',
+            oxygenTotal: '',
+            oxygenAvailable: '',
+            ventilatorTotal: '',
+            ventilatorAvailable: '',
           });
         }
 
@@ -93,7 +112,16 @@ export const HospitalDashboard = () => {
     setBedSaving(true);
     setBedMessage({ type: '', text: '' });
 
-    // Mathematical consistency check
+    const counts = Object.values(bedForm);
+    if (counts.some((count) => !Number.isSafeInteger(count) || count < 0)) {
+      setBedMessage({
+        type: 'error',
+        text: 'Enter a non-negative whole number for every bed count before publishing availability.',
+      });
+      setBedSaving(false);
+      return;
+    }
+
     if (bedForm.occupiedBeds + bedForm.availableBeds > bedForm.totalBeds) {
       setBedMessage({
         type: 'error',
@@ -103,13 +131,29 @@ export const HospitalDashboard = () => {
       return;
     }
 
+    if (
+      bedForm.icuAvailable > bedForm.icuTotal
+      || bedForm.oxygenAvailable > bedForm.oxygenTotal
+      || bedForm.ventilatorAvailable > bedForm.ventilatorTotal
+    ) {
+      setBedMessage({
+        type: 'error',
+        text: 'Available ICU, oxygen, and ventilator beds cannot exceed their respective totals.',
+      });
+      setBedSaving(false);
+      return;
+    }
+
     try {
       const res = await hospitalService.updateHospitalBeds(hospital._id, bedForm);
       if (res.success) {
-        setBedMessage({ type: 'success', text: 'Bed inventory successfully updated and broadcasted.' });
+        setBedMessage({ type: '', text: '' });
+        notify(res.message || 'Bed availability updated successfully.');
       }
     } catch (err) {
-      setBedMessage({ type: 'error', text: err.response?.data?.message || 'Update failed.' });
+      const message = err.response?.data?.message || 'Bed inventory update failed.';
+      setBedMessage({ type: 'error', text: message });
+      notify(message, 'error');
     } finally {
       setBedSaving(false);
     }
@@ -136,9 +180,10 @@ export const HospitalDashboard = () => {
           prev.map((a) => (a._id === selectedAppt._id ? res.appointment : a))
         );
         setStatusModalOpen(false);
+        notify(res.message || `Appointment successfully marked as ${targetStatus}.`);
       }
     } catch (err) {
-      console.error('Failed to update status:', err);
+      notify(err.response?.data?.message || 'Failed to update appointment status.', 'error');
     } finally {
       setStatusUpdating(false);
     }
@@ -212,6 +257,11 @@ export const HospitalDashboard = () => {
                 <p className="text-xs text-text-secondary mt-0.5">
                   Update your hospital-reported bed availability. Calculations are mathematically verified before saving.
                 </p>
+                {!hospital?.bedInventory && (
+                  <p className="text-xs text-amber-300 mt-2">
+                    No bed availability has been published yet. Enter current hospital-reported counts; no sample values are prefilled.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -239,11 +289,13 @@ export const HospitalDashboard = () => {
                     required
                     value={bedForm.totalBeds}
                     onChange={(e) => {
-                      const total = parseInt(e.target.value, 10) || 0;
+                      const total = e.target.value === '' ? '' : Number(e.target.value);
                       setBedForm({
                         ...bedForm,
                         totalBeds: total,
-                        availableBeds: Math.max(0, total - bedForm.occupiedBeds),
+                        availableBeds: total === '' || bedForm.occupiedBeds === ''
+                          ? ''
+                          : Math.max(0, total - bedForm.occupiedBeds),
                       });
                     }}
                     className="w-full bg-[#171717] border border-[#303030] rounded-xl px-3 py-2 text-white font-bold text-lg focus:outline-none focus:border-red-500"
@@ -259,11 +311,13 @@ export const HospitalDashboard = () => {
                     required
                     value={bedForm.occupiedBeds}
                     onChange={(e) => {
-                      const occ = parseInt(e.target.value, 10) || 0;
+                      const occ = e.target.value === '' ? '' : Number(e.target.value);
                       setBedForm({
                         ...bedForm,
                         occupiedBeds: occ,
-                        availableBeds: Math.max(0, bedForm.totalBeds - occ),
+                        availableBeds: bedForm.totalBeds === '' || occ === ''
+                          ? ''
+                          : Math.max(0, bedForm.totalBeds - occ),
                       });
                     }}
                     className="w-full bg-[#171717] border border-[#303030] rounded-xl px-3 py-2 text-amber-400 font-bold text-lg focus:outline-none focus:border-red-500"
@@ -278,7 +332,10 @@ export const HospitalDashboard = () => {
                     min="0"
                     required
                     value={bedForm.availableBeds}
-                    onChange={(e) => setBedForm({ ...bedForm, availableBeds: parseInt(e.target.value, 10) || 0 })}
+                    onChange={(e) => setBedForm({
+                      ...bedForm,
+                      availableBeds: e.target.value === '' ? '' : Number(e.target.value),
+                    })}
                     className="w-full bg-[#171717] border border-[#303030] rounded-xl px-3 py-2 text-emerald-400 font-bold text-lg focus:outline-none focus:border-red-500"
                   />
                   <p className="text-[10px] text-text-secondary">Immediately available for admissions</p>
@@ -296,8 +353,9 @@ export const HospitalDashboard = () => {
                       <input
                         type="number"
                         min="0"
+                        required
                         value={bedForm.icuTotal}
-                        onChange={(e) => setBedForm({ ...bedForm, icuTotal: parseInt(e.target.value, 10) || 0 })}
+                        onChange={(e) => setBedForm({ ...bedForm, icuTotal: e.target.value === '' ? '' : Number(e.target.value) })}
                         className="w-full bg-[#171717] border border-[#303030] rounded-lg p-2 text-white"
                       />
                     </div>
@@ -306,8 +364,9 @@ export const HospitalDashboard = () => {
                       <input
                         type="number"
                         min="0"
+                        required
                         value={bedForm.icuAvailable}
-                        onChange={(e) => setBedForm({ ...bedForm, icuAvailable: parseInt(e.target.value, 10) || 0 })}
+                        onChange={(e) => setBedForm({ ...bedForm, icuAvailable: e.target.value === '' ? '' : Number(e.target.value) })}
                         className="w-full bg-[#171717] border border-[#303030] rounded-lg p-2 text-emerald-400 font-bold"
                       />
                     </div>
@@ -323,8 +382,9 @@ export const HospitalDashboard = () => {
                       <input
                         type="number"
                         min="0"
+                        required
                         value={bedForm.oxygenTotal}
-                        onChange={(e) => setBedForm({ ...bedForm, oxygenTotal: parseInt(e.target.value, 10) || 0 })}
+                        onChange={(e) => setBedForm({ ...bedForm, oxygenTotal: e.target.value === '' ? '' : Number(e.target.value) })}
                         className="w-full bg-[#171717] border border-[#303030] rounded-lg p-2 text-white"
                       />
                     </div>
@@ -333,8 +393,9 @@ export const HospitalDashboard = () => {
                       <input
                         type="number"
                         min="0"
+                        required
                         value={bedForm.oxygenAvailable}
-                        onChange={(e) => setBedForm({ ...bedForm, oxygenAvailable: parseInt(e.target.value, 10) || 0 })}
+                        onChange={(e) => setBedForm({ ...bedForm, oxygenAvailable: e.target.value === '' ? '' : Number(e.target.value) })}
                         className="w-full bg-[#171717] border border-[#303030] rounded-lg p-2 text-emerald-400 font-bold"
                       />
                     </div>
@@ -350,8 +411,9 @@ export const HospitalDashboard = () => {
                       <input
                         type="number"
                         min="0"
+                        required
                         value={bedForm.ventilatorTotal}
-                        onChange={(e) => setBedForm({ ...bedForm, ventilatorTotal: parseInt(e.target.value, 10) || 0 })}
+                        onChange={(e) => setBedForm({ ...bedForm, ventilatorTotal: e.target.value === '' ? '' : Number(e.target.value) })}
                         className="w-full bg-[#171717] border border-[#303030] rounded-lg p-2 text-white"
                       />
                     </div>
@@ -360,8 +422,9 @@ export const HospitalDashboard = () => {
                       <input
                         type="number"
                         min="0"
+                        required
                         value={bedForm.ventilatorAvailable}
-                        onChange={(e) => setBedForm({ ...bedForm, ventilatorAvailable: parseInt(e.target.value, 10) || 0 })}
+                        onChange={(e) => setBedForm({ ...bedForm, ventilatorAvailable: e.target.value === '' ? '' : Number(e.target.value) })}
                         className="w-full bg-[#171717] border border-[#303030] rounded-lg p-2 text-emerald-400 font-bold"
                       />
                     </div>

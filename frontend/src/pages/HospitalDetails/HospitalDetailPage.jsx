@@ -27,11 +27,13 @@ import { VerifiedBadge, EmergencyBadge, Badge } from '../../components/common/Ba
 import HospitalMap from '../../components/maps/HospitalMap';
 import Button from '../../components/common/Button';
 import Modal from '../../components/common/Modal';
+import { useToast } from '../../context/ToastContext';
 
 export const HospitalDetailPage = () => {
   const { id } = useParams();
   const { user, isAuthenticated, toggleSaveHospital, isHospitalSaved } = useAuth();
   const { addToCompare, isInCompare, removeFromCompare } = useCompare();
+  const notify = useToast();
 
   const [hospital, setHospital] = useState(null);
   const [reviews, setReviews] = useState([]);
@@ -126,12 +128,20 @@ export const HospitalDetailPage = () => {
     );
   }
 
-  const [lng, lat] = hospital.location?.coordinates || [78.4867, 17.3850];
-  const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+  const coordinates = hospital.location?.coordinates;
+  const hasCoordinates = Array.isArray(coordinates)
+    && coordinates.length === 2
+    && coordinates.every(Number.isFinite);
+  const [lng, lat] = hasCoordinates ? coordinates : [80.6480, 16.5062];
+  const destination = hasCoordinates
+    ? `${lat},${lng}`
+    : [hospital.name, hospital.address, hospital.locality, hospital.city, hospital.pincode].filter(Boolean).join(', ');
+  const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`;
   const isSaved = isHospitalSaved(hospital._id);
   const inCompare = isInCompare(hospital._id);
   const bedInfo = hospital.bedInventory;
   const emergencyInfo = hospital.emergencyDetails;
+  const isVijayawadaHospital = hospital.city?.toLowerCase() === 'vijayawada';
 
   const handleAppointmentSubmit = async (e) => {
     e.preventDefault();
@@ -148,6 +158,7 @@ export const HospitalDetailPage = () => {
       });
       if (res.success) {
         setAppointmentSuccess(true);
+        notify(res.message || 'Appointment request submitted successfully. The hospital will confirm it shortly.');
         setTimeout(() => {
           setAppointmentSuccess(false);
           setAppointmentModalOpen(false);
@@ -213,14 +224,23 @@ export const HospitalDetailPage = () => {
 
           <div className="flex flex-wrap items-center gap-2 mb-3">
             {hospital.isVerified && <VerifiedBadge />}
-            {hospital.hasEmergency && <EmergencyBadge />}
+            {hospital.dataSource === 'openstreetmap' && (
+              <span className="community-source-badge">OpenStreetMap community listing · unverified</span>
+            )}
+            {hospital.hasEmergency && (
+              <EmergencyBadge
+                label={hospital.is24x7 ? '24/7 Emergency' : 'Emergency Care'}
+              />
+            )}
             <Badge variant={hospital.type === 'Government' ? 'govt' : 'private'}>
-              {hospital.type} Healthcare
+              {hospital.type === 'Unknown' ? 'Ownership not listed' : `${hospital.type} Healthcare`}
             </Badge>
-            <Badge variant="default">
-              <Clock className="w-3 h-3 text-red-500" />
-              {hospital.operatingHours}
-            </Badge>
+            {hospital.operatingHours && hospital.operatingHours !== 'Hours not listed' && (
+              <Badge variant="default">
+                <Clock className="w-3 h-3 text-red-500" />
+                {hospital.operatingHours}
+              </Badge>
+            )}
           </div>
 
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -230,7 +250,10 @@ export const HospitalDetailPage = () => {
               </h1>
               <p className="mt-2 text-xs sm:text-sm text-text-secondary flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-red-500 shrink-0" />
-                <span>{hospital.address}, {hospital.locality ? `${hospital.locality}, ` : ''}{hospital.city}, {hospital.state} - {hospital.pincode}</span>
+                <span>
+                  {[hospital.address, hospital.locality, hospital.city, hospital.state, hospital.pincode].filter(Boolean).join(', ')
+                    || 'Address not listed'}
+                </span>
               </p>
             </div>
 
@@ -258,22 +281,26 @@ export const HospitalDetailPage = () => {
               >
                 <Heart className={`w-4 h-4 ${isSaved ? 'fill-white' : ''}`} />
               </button>
-              <a
-                href={`tel:${hospital.phone}`}
-                className="px-4 py-3 rounded-xl bg-[#202020] hover:bg-[#282828] border border-[#303030] text-white text-xs font-bold flex items-center gap-2 transition-colors"
-              >
-                <Phone className="w-4 h-4 text-red-500" />
-                Call Desk
-              </a>
-              <Button
-                variant="primary"
-                size="md"
-                icon={Calendar}
-                onClick={() => setAppointmentModalOpen(true)}
-                className="shadow-lg shadow-red-500/30"
-              >
-                Request Appointment
-              </Button>
+              {hospital.phone && (
+                <a
+                  href={`tel:${hospital.phone.replace(/[^\d+]/g, '')}`}
+                  className="px-4 py-3 rounded-xl bg-[#202020] hover:bg-[#282828] border border-[#303030] text-white text-xs font-bold flex items-center gap-2 transition-colors"
+                >
+                  <Phone className="w-4 h-4 text-red-500" />
+                  Call Desk
+                </a>
+              )}
+              {hospital.isVerified && isVijayawadaHospital && (
+                <Button
+                  variant="primary"
+                  size="md"
+                  icon={Calendar}
+                  onClick={() => setAppointmentModalOpen(true)}
+                  className="shadow-lg shadow-red-500/30"
+                >
+                  Request Appointment
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -281,6 +308,19 @@ export const HospitalDetailPage = () => {
 
       {/* Main Details Grid */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+        {hospital.dataSource === 'openstreetmap' && (
+          <div className="community-listing-notice mb-6">
+            <p>
+              This location is sourced from OpenStreetMap and has not been independently verified by MediSync.
+              Confirm the address and services with the facility before travelling. Bed availability and appointments are not provided for community listings.
+            </p>
+            {hospital.sourceReference && (
+              <a href={hospital.sourceReference} target="_blank" rel="noopener noreferrer">
+                View OpenStreetMap source
+              </a>
+            )}
+          </div>
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left / Center 2 Columns */}
           <div className="lg:col-span-2 space-y-8">
@@ -291,15 +331,15 @@ export const HospitalDetailPage = () => {
                 About {hospital.name}
               </h2>
               <p className="text-xs sm:text-sm text-text-secondary leading-relaxed">
-                {hospital.description || 'Modern multi-speciality tertiary healthcare facility dedicated to clinical excellence, patient safety, and comprehensive specialized care.'}
+                {hospital.description || 'Hospital information is not available in this directory listing.'}
               </p>
 
               {/* Contact meta row */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-[#303030] text-xs">
-                <div className="flex items-center gap-2 text-text-secondary">
+                {hospital.phone ? <div className="flex items-center gap-2 text-text-secondary">
                   <Phone className="w-4 h-4 text-red-500 shrink-0" />
                   <span>Main: <strong className="text-white">{hospital.phone}</strong></span>
-                </div>
+                </div> : <p className="text-text-secondary">Phone number not listed.</p>}
                 {hospital.emergencyPhone && (
                   <div className="flex items-center gap-2 text-text-secondary">
                     <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
@@ -369,21 +409,27 @@ export const HospitalDetailPage = () => {
                     Patient Reviews ({reviews.length})
                   </h2>
                   <p className="text-xs text-text-secondary mt-0.5">
-                    Average rating: <strong className="text-white">{hospital.rating?.toFixed(1) || '4.5'}</strong> / 5.0
+                    Average rating: <strong className="text-white">
+                      {hospital.reviewCount && Number.isFinite(hospital.rating)
+                        ? `${hospital.rating.toFixed(1)} / 5.0`
+                        : 'Not rated'}
+                    </strong>
                   </p>
                 </div>
-                <Button
+                {hospital.isVerified && isVijayawadaHospital && <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setReviewModalOpen(true)}
                 >
                   Write a Review
-                </Button>
+                </Button>}
               </div>
 
               {reviews.length === 0 ? (
                 <div className="text-center py-8 text-xs text-text-secondary">
-                  No verified patient reviews yet. Be the first to share your experience.
+                  {hospital.isVerified && isVijayawadaHospital
+                    ? 'No verified patient reviews yet. Be the first to share your experience.'
+                    : 'Patient reviews are unavailable until this hospital is verified.'}
                 </div>
               ) : (
                 <div className="space-y-4">

@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { JWT_SECRET } = require('../config/environment');
 
 const protect = async (req, res, next) => {
   let token;
@@ -21,7 +22,7 @@ const protect = async (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'medisync_super_secret_jwt_key_2026');
+    const decoded = jwt.verify(token, JWT_SECRET);
     const user = await User.findById(decoded.id);
 
     if (!user) {
@@ -63,9 +64,9 @@ const optionalAuth = async (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'medisync_super_secret_jwt_key_2026');
+    const decoded = jwt.verify(token, JWT_SECRET);
     const user = await User.findById(decoded.id);
-    req.user = user || null;
+    req.user = user && user.isActive ? user : null;
   } catch (error) {
     req.user = null;
   }
@@ -93,4 +94,3 @@ const authorize = (...roles) => {
 };
 
 module.exports = { protect, optionalAuth, authorize };
-

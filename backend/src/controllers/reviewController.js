@@ -2,6 +2,7 @@ const Review = require('../models/Review');
 const Hospital = require('../models/Hospital');
 const Appointment = require('../models/Appointment');
 const { recordAuditLog } = require('../middleware/audit');
+const { CITY_NAME } = require('../constants');
 
 // @desc    Get reviews for a hospital
 // @route   GET /api/hospitals/:id/reviews
@@ -58,6 +59,13 @@ const addReview = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Hospital not found.' });
     }
 
+    if (!hospital.isVerified || hospital.city.toLowerCase() !== CITY_NAME.toLowerCase()) {
+      return res.status(400).json({
+        success: false,
+        message: `Reviews are only available for MediSync-verified hospitals in ${CITY_NAME}.`,
+      });
+    }
+
     // Check if patient had an appointment at this hospital
     const hasAppointment = await Appointment.findOne({
       patientId: req.user._id,
@@ -112,4 +120,3 @@ module.exports = {
   getHospitalReviews,
   addReview,
 };
-

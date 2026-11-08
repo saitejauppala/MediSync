@@ -66,9 +66,11 @@ bedInventorySchema.pre('save', function (next) {
   if (this.oxygenBeds.available > this.oxygenBeds.total) {
     return next(new Error('Available oxygen beds cannot exceed total oxygen beds'));
   }
+  if (this.ventilatorBeds.available > this.ventilatorBeds.total) {
+    return next(new Error('Available ventilator beds cannot exceed total ventilator beds'));
+  }
   this.lastUpdated = new Date();
   next();
 });
 
 module.exports = mongoose.model('BedInventory', bedInventorySchema);
-

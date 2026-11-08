@@ -4,17 +4,17 @@ import { ShieldCheck, AlertCircle, Clock, CheckCircle2, XCircle } from 'lucide-r
 export const Badge = ({ children, variant = 'default', className = '' }) => {
   const variants = {
     default: 'bg-[#202020] text-text-secondary border-border',
-    red: 'bg-red-950/60 text-red-400 border-red-900/60',
-    redSolid: 'bg-red-600 text-white border-transparent',
-    emergency: 'bg-red-900/80 text-white border-red-500/80 animate-pulse font-bold',
-    verified: 'bg-emerald-950/60 text-emerald-400 border-emerald-800/60',
-    pending: 'bg-amber-950/60 text-amber-400 border-amber-800/60',
-    confirmed: 'bg-emerald-950/60 text-emerald-400 border-emerald-800/60',
-    rejected: 'bg-red-950/80 text-red-300 border-red-900',
-    completed: 'bg-blue-950/60 text-blue-400 border-blue-800/60',
+    red: 'bg-[#202020] text-white border-[#404040]',
+    redSolid: 'bg-white text-black border-transparent',
+    emergency: 'bg-[#262626] text-white border-[#525252] font-semibold',
+    verified: 'bg-[#202020] text-[#d4d4d4] border-[#404040]',
+    pending: 'bg-[#202020] text-[#a3a3a3] border-[#404040]',
+    confirmed: 'bg-[#202020] text-[#d4d4d4] border-[#404040]',
+    rejected: 'bg-[#202020] text-[#a3a3a3] border-[#404040]',
+    completed: 'bg-[#202020] text-[#d4d4d4] border-[#404040]',
     cancelled: 'bg-[#202020] text-text-secondary border-[#404040]',
     govt: 'bg-zinc-800 text-zinc-200 border-zinc-700',
-    private: 'bg-red-950/40 text-red-300 border-red-800/40',
+    private: 'bg-[#202020] text-[#d4d4d4] border-[#404040]',
   };
 
   return (
@@ -31,19 +31,19 @@ export const Badge = ({ children, variant = 'default', className = '' }) => {
 export const VerifiedBadge = ({ isVerified = true }) => {
   if (!isVerified) return null;
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-950/80 text-emerald-400 border border-emerald-800/70">
-      <ShieldCheck className="w-3 h-3 text-emerald-400" />
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#202020] text-[#d4d4d4] border border-[#404040]">
+      <ShieldCheck className="w-3 h-3 text-[#d4d4d4]" />
       Verified Hospital
     </span>
   );
 };
 
-export const EmergencyBadge = ({ hasEmergency = true }) => {
+export const EmergencyBadge = ({ hasEmergency = true, label = '24/7 Emergency' }) => {
   if (!hasEmergency) return null;
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-red-900 text-white border border-red-500 shadow-sm shadow-red-500/30">
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#262626] text-white border border-[#525252]">
       <AlertCircle className="w-3 h-3 text-white" />
-      24/7 Emergency
+      {label}
     </span>
   );
 };

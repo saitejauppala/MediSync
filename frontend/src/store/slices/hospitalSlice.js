@@ -102,3 +102,4 @@ const hospitalSlice = createSlice({
 
 export const { setUserLocation, setLocationPermission, clearSelectedHospital } = hospitalSlice.actions;
 export default hospitalSlice.reducer;
+

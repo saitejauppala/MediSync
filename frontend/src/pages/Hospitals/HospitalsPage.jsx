@@ -18,6 +18,7 @@ import hospitalService from '../../services/hospitalService';
 import HospitalCard from '../../components/hospitals/HospitalCard';
 import HospitalMap from '../../components/maps/HospitalMap';
 import Button from '../../components/common/Button';
+import { useToast } from '../../context/ToastContext';
 
 const SPECIALITIES_OPTIONS = [
   'All',
@@ -36,17 +37,23 @@ const SPECIALITIES_OPTIONS = [
 ];
 
 export const HospitalsPage = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
+  const notify = useToast();
 
   // Search & Filter States
   const [search, setSearch] = useState(searchParams.get('search') || '');
-  const [city, setCity] = useState(searchParams.get('city') || '');
+  const [submittedSearch, setSubmittedSearch] = useState(searchParams.get('search') || '');
   const [selectedSpeciality, setSelectedSpeciality] = useState(searchParams.get('speciality') || 'All');
   const [selectedType, setSelectedType] = useState(searchParams.get('type') || 'All');
   const [emergencyOnly, setEmergencyOnly] = useState(searchParams.get('emergency') === 'true');
   const [is24x7Only, setIs24x7Only] = useState(searchParams.get('is24x7') === 'true');
-  const [distanceKm, setDistanceKm] = useState(25);
+  const [distanceKm, setDistanceKm] = useState(10);
   const [sortBy, setSortBy] = useState('rating');
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [locationSearch, setLocationSearch] = useState('');
+  const [locationOptions, setLocationOptions] = useState([]);
+  const [locationSearchLoading, setLocationSearchLoading] = useState(false);
+  const [userLocationLabel, setUserLocationLabel] = useState('');
 
   // Geolocation state
   const [userCoords, setUserCoords] = useState(null);
@@ -60,6 +67,7 @@ export const HospitalsPage = () => {
   // Data states
   const [hospitals, setHospitals] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [selectedHospitalId, setSelectedHospitalId] = useState(null);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -82,13 +90,23 @@ export const HospitalsPage = () => {
         };
         setUserCoords(coords);
         setGeoLoading(false);
+        setUserLocationLabel('Current location');
+        hospitalService.reverseGeocode(coords.latitude, coords.longitude)
+          .then((res) => {
+            if (res.success && res.place?.displayName) {
+              setUserLocationLabel(res.place.displayName);
+            }
+          })
+          .catch(() => {
+            setUserLocationLabel('Current location');
+          });
       },
       (error) => {
         setGeoLoading(false);
         if (error.code === error.PERMISSION_DENIED) {
-          setGeoError('Location permission denied. Enter your city or PIN manually.');
+          setGeoError('Location permission denied. Search by locality or PIN code instead.');
         } else {
-          setGeoError('Unable to retrieve location coordinates. Enter city manually.');
+          setGeoError('Unable to retrieve your location. Search by locality or PIN code instead.');
         }
       },
       { timeout: 10000, enableHighAccuracy: true }
@@ -98,6 +116,7 @@ export const HospitalsPage = () => {
   // Fetch hospitals based on active parameters
   const loadHospitals = async () => {
     setLoading(true);
+    setLoadError('');
     try {
       if (userCoords) {
         // Geospatial Nearby API call
@@ -105,21 +124,28 @@ export const HospitalsPage = () => {
           longitude: userCoords.longitude,
           latitude: userCoords.latitude,
           maxDistance: distanceKm,
+          search: submittedSearch || undefined,
+          page,
+          limit: 20,
+          sortBy,
+          sortOrder: sortBy === 'name' ? 'asc' : 'desc',
+          verifiedOnly: verifiedOnly ? 'true' : undefined,
           emergency: emergencyOnly ? 'true' : undefined,
+          is24x7: is24x7Only ? 'true' : undefined,
           type: selectedType !== 'All' ? selectedType : undefined,
           speciality: selectedSpeciality !== 'All' ? selectedSpeciality : undefined,
         });
 
         if (res.success) {
           setHospitals(res.hospitals);
-          setTotal(res.count);
-          setTotalPages(1);
+          setTotal(res.total);
+          setTotalPages(res.totalPages || 1);
         }
       } else {
         // Standard Filter API call
         const res = await hospitalService.getHospitals({
-          search: search || undefined,
-          city: city || undefined,
+          search: submittedSearch || undefined,
+          city: 'Vijayawada',
           type: selectedType !== 'All' ? selectedType : undefined,
           speciality: selectedSpeciality !== 'All' ? selectedSpeciality : undefined,
           emergency: emergencyOnly ? 'true' : undefined,
@@ -127,6 +153,8 @@ export const HospitalsPage = () => {
           page,
           limit: 12,
           sortBy,
+          sortOrder: sortBy === 'name' ? 'asc' : 'desc',
+          verifiedOnly: verifiedOnly ? 'true' : undefined,
         });
 
         if (res.success) {
@@ -137,6 +165,11 @@ export const HospitalsPage = () => {
       }
     } catch (err) {
       console.error('Failed to load hospitals:', err);
+      const message = err.response?.data?.message || 'Unable to load Vijayawada hospitals. Please try again.';
+      setLoadError(message);
+      setHospitals([]);
+      setTotal(0);
+      notify(message, 'error');
     } finally {
       setLoading(false);
     }
@@ -144,22 +177,64 @@ export const HospitalsPage = () => {
 
   useEffect(() => {
     loadHospitals();
-  }, [userCoords, distanceKm, selectedSpeciality, selectedType, emergencyOnly, is24x7Only, sortBy, page]);
+  }, [userCoords, distanceKm, selectedSpeciality, selectedType, emergencyOnly, is24x7Only, sortBy, page, submittedSearch, verifiedOnly]);
+
+  useEffect(() => {
+    if (searchParams.get('nearby') === 'true') {
+      handleDetectLocation();
+    }
+  }, []);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     setPage(1);
-    loadHospitals();
+    setSubmittedSearch(search.trim());
+  };
+
+  const handleLocationSearch = async (event) => {
+    event.preventDefault();
+    const query = locationSearch.trim();
+    if (query.length < 2) {
+      setGeoError('Enter at least two characters to search for a Vijayawada location.');
+      return;
+    }
+
+    setLocationSearchLoading(true);
+    setGeoError('');
+    setLocationOptions([]);
+    try {
+      const res = await hospitalService.searchLocations(query);
+      if (!res.success || res.places.length === 0) {
+        setGeoError('No matching Vijayawada location found. Try a nearby locality or PIN code.');
+        return;
+      }
+      setLocationOptions(res.places);
+    } catch (err) {
+      setGeoError(err.response?.data?.message || 'Location search is temporarily unavailable.');
+    } finally {
+      setLocationSearchLoading(false);
+    }
+  };
+
+  const handleSelectLocation = (place) => {
+    setUserCoords({ latitude: place.latitude, longitude: place.longitude });
+    setUserLocationLabel(place.displayName);
+    setLocationOptions([]);
+    setGeoError('');
+    setPage(1);
   };
 
   const handleClearFilters = () => {
     setSearch('');
-    setCity('');
+    setSubmittedSearch('');
     setSelectedSpeciality('All');
     setSelectedType('All');
     setEmergencyOnly(false);
     setIs24x7Only(false);
     setUserCoords(null);
+    setUserLocationLabel('');
+    setLocationOptions([]);
+    setVerifiedOnly(false);
     setGeoError('');
     setPage(1);
   };
@@ -177,7 +252,7 @@ export const HospitalsPage = () => {
             <Search className="w-4 h-4 text-red-500 shrink-0" />
             <input
               type="text"
-              placeholder="Search by hospital name, locality, or PIN code..."
+              placeholder="Search Vijayawada hospitals by name, locality, or PIN code..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="bg-transparent text-white text-xs sm:text-sm w-full focus:outline-none placeholder-text-secondary"
@@ -255,6 +330,50 @@ export const HospitalsPage = () => {
           </div>
         </div>
 
+        <div className="max-w-7xl mx-auto mt-3">
+          <form onSubmit={handleLocationSearch} className="flex flex-col gap-2 sm:flex-row">
+            <label className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-[#303030] bg-[#171717] px-3 py-2 focus-within:border-red-500">
+              <MapPin className="h-4 w-4 shrink-0 text-red-500" aria-hidden="true" />
+              <input
+                type="search"
+                aria-label="Search a Vijayawada locality"
+                placeholder="Or enter a Vijayawada locality or PIN code"
+                value={locationSearch}
+                onChange={(event) => setLocationSearch(event.target.value)}
+                className="w-full bg-transparent text-xs text-white outline-none placeholder:text-text-secondary"
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={locationSearchLoading}
+              className="rounded-xl border border-[#303030] bg-[#202020] px-4 py-2 text-xs font-semibold text-white hover:border-red-500 disabled:opacity-60"
+            >
+              {locationSearchLoading ? 'Searching...' : 'Search location'}
+            </button>
+          </form>
+          {locationOptions.length > 0 && (
+            <div className="mt-2 overflow-hidden rounded-xl border border-[#303030] bg-[#171717]" role="listbox" aria-label="Location search results">
+              {locationOptions.map((place) => (
+                <button
+                  type="button"
+                  key={place.placeId}
+                  role="option"
+                  aria-selected="false"
+                  onClick={() => handleSelectLocation(place)}
+                  className="block w-full border-b border-[#303030] px-3 py-2 text-left text-xs text-text-secondary last:border-b-0 hover:bg-[#202020] hover:text-white"
+                >
+                  {place.displayName}
+                </button>
+              ))}
+            </div>
+          )}
+          {userLocationLabel && userCoords && (
+            <p className="mt-2 truncate text-[11px] text-text-secondary" title={userLocationLabel}>
+              Searching around: {userLocationLabel}
+            </p>
+          )}
+        </div>
+
         {/* Geolocation feedback note */}
         {geoError && (
           <div className="max-w-7xl mx-auto mt-2 text-xs text-amber-400 flex items-center gap-1.5">
@@ -290,20 +409,15 @@ export const HospitalsPage = () => {
                     <span className="text-white">Search Radius</span>
                     <span className="text-red-400">{distanceKm} km</span>
                   </div>
-                  <input
-                    type="range"
-                    min="5"
-                    max="50"
-                    step="5"
+                  <select
                     value={distanceKm}
-                    onChange={(e) => setDistanceKm(parseInt(e.target.value, 10))}
-                    className="w-full accent-red-500 bg-[#303030] h-1.5 rounded-lg cursor-pointer"
-                  />
-                  <div className="flex justify-between text-[10px] text-text-secondary">
-                    <span>5 km</span>
-                    <span>25 km</span>
-                    <span>50 km</span>
-                  </div>
+                    onChange={(e) => setDistanceKm(Number(e.target.value))}
+                    className="w-full rounded-xl border border-[#303030] bg-[#202020] px-3 py-2 text-xs text-white"
+                  >
+                    {[1, 5, 10, 25, 50].map((distance) => (
+                      <option key={distance} value={distance}>{distance} km</option>
+                    ))}
+                  </select>
                 </div>
               )}
 
@@ -347,6 +461,15 @@ export const HospitalsPage = () => {
               {/* Toggle Filters */}
               <div className="space-y-3 pt-3 border-t border-[#303030]">
                 <label className="flex items-center justify-between text-xs cursor-pointer select-none">
+                  <span className="text-white font-medium">Verified hospitals only</span>
+                  <input
+                    type="checkbox"
+                    checked={verifiedOnly}
+                    onChange={(e) => setVerifiedOnly(e.target.checked)}
+                    className="accent-red-500 w-4 h-4 rounded"
+                  />
+                </label>
+                <label className="flex items-center justify-between text-xs cursor-pointer select-none">
                   <span className="text-white font-medium flex items-center gap-1.5">
                     <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
                     24/7 Emergency Care Only
@@ -379,6 +502,7 @@ export const HospitalsPage = () => {
                   className="w-full bg-[#202020] border border-[#303030] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500"
                 >
                   <option value="rating">Highest Patient Rating</option>
+                  <option value="reviews">Most Patient Reviews</option>
                   <option value="name">Alphabetical (A - Z)</option>
                   <option value="recent">Recently Added</option>
                 </select>
@@ -395,10 +519,17 @@ export const HospitalsPage = () => {
                   Available Hospitals
                 </h2>
                 <p className="text-xs text-text-secondary">
-                  Showing {hospitals.length} {userCoords ? `within ${distanceKm} km` : 'verified medical facilities'}
+                  {total} hospitals listed in Vijayawada
+                  {userCoords ? ` within ${distanceKm} km of your location` : ''}
                 </p>
               </div>
             </div>
+
+            {loadError && (
+              <div role="alert" className="mb-5 rounded-xl border border-red-900/60 bg-red-950/30 p-3 text-xs text-red-200">
+                {loadError}
+              </div>
+            )}
 
             {/* Split View (Cards on Left/Top, Interactive Map on Right/Bottom) */}
             {viewMode === 'split' && (
@@ -416,7 +547,9 @@ export const HospitalsPage = () => {
                       <Building2 className="w-12 h-12 text-red-500/40 mx-auto mb-3" />
                       <h3 className="text-base font-bold text-white">No Hospitals Match Filters</h3>
                       <p className="text-xs text-text-secondary mt-1">
-                        Try expanding your distance radius or resetting your medical speciality filter.
+                        {userCoords
+                          ? 'Try expanding your search radius or resetting your filters. Only hospitals within Vijayawada are shown.'
+                          : 'There are no verified Vijayawada hospitals matching these filters yet. Try resetting your filters.'}
                       </p>
                       <Button variant="secondary" size="sm" onClick={handleClearFilters} className="mt-4">
                         Reset Filters
@@ -426,9 +559,12 @@ export const HospitalsPage = () => {
                     hospitals.map((hospital) => (
                       <div
                         key={hospital._id}
-                        onMouseEnter={() => setSelectedHospitalId(hospital._id)}
                       >
-                        <HospitalCard hospital={hospital} />
+                        <HospitalCard
+                          hospital={hospital}
+                          selected={selectedHospitalId === hospital._id}
+                          onSelectOnMap={() => setSelectedHospitalId(hospital._id)}
+                        />
                       </div>
                     ))
                   )}
@@ -440,6 +576,7 @@ export const HospitalsPage = () => {
                     hospitals={hospitals}
                     userLocation={userCoords}
                     selectedHospitalId={selectedHospitalId}
+                    onMarkerClick={(hospital) => setSelectedHospitalId(hospital._id)}
                     height="100%"
                   />
                 </div>
@@ -450,7 +587,10 @@ export const HospitalsPage = () => {
             {viewMode === 'list' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {hospitals.map((hospital) => (
-                  <HospitalCard key={hospital._id} hospital={hospital} />
+                  <HospitalCard
+                    key={hospital._id}
+                    hospital={hospital}
+                  />
                 ))}
               </div>
             )}
@@ -462,13 +602,14 @@ export const HospitalsPage = () => {
                   hospitals={hospitals}
                   userLocation={userCoords}
                   selectedHospitalId={selectedHospitalId}
+                  onMarkerClick={(hospital) => setSelectedHospitalId(hospital._id)}
                   height="100%"
                 />
               </div>
             )}
 
             {/* Pagination */}
-            {!userCoords && totalPages > 1 && (
+            {totalPages > 1 && (
               <div className="mt-8 flex items-center justify-center space-x-2">
                 <button
                   disabled={page <= 1}

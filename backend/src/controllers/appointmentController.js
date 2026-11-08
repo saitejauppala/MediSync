@@ -2,6 +2,7 @@ const Appointment = require('../models/Appointment');
 const Hospital = require('../models/Hospital');
 const Notification = require('../models/Notification');
 const { recordAuditLog } = require('../middleware/audit');
+const { CITY_NAME } = require('../constants');
 
 // @desc    Request an appointment
 // @route   POST /api/appointments
@@ -33,6 +34,13 @@ const createAppointment = async (req, res, next) => {
       return res.status(404).json({
         success: false,
         message: 'Hospital not found.',
+      });
+    }
+
+    if (!hospital.isVerified || hospital.city.toLowerCase() !== CITY_NAME.toLowerCase()) {
+      return res.status(400).json({
+        success: false,
+        message: `Appointments are only available at MediSync-verified hospitals in ${CITY_NAME}.`,
       });
     }
 
@@ -338,4 +346,3 @@ module.exports = {
   updateAppointmentStatus,
   cancelAppointment,
 };
-

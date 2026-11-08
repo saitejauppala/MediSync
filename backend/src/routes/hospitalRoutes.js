@@ -11,13 +11,13 @@ const {
 } = require('../controllers/hospitalController');
 const { getHospitalBeds } = require('../controllers/bedController');
 const { getHospitalReviews, addReview } = require('../controllers/reviewController');
-const { protect, authorize } = require('../middleware/auth');
+const { protect, optionalAuth, authorize } = require('../middleware/auth');
 
 router.get('/', getHospitals);
 router.get('/nearby', getNearbyHospitals);
 router.get('/search', searchHospitals);
 router.get('/compare', compareHospitals);
-router.get('/:id', getHospitalById);
+router.get('/:id', optionalAuth, getHospitalById);
 router.post('/', protect, authorize('hospital_admin', 'platform_admin'), createHospital);
 router.patch('/:id', protect, authorize('hospital_admin', 'platform_admin'), updateHospital);
 
@@ -27,4 +27,3 @@ router.get('/:id/reviews', getHospitalReviews);
 router.post('/:id/reviews', protect, addReview);
 
 module.exports = router;
-

@@ -122,7 +122,6 @@ class HospitalService {
 
   async createHospital(hospitalData, user, ip) {
     const slug = createSlug(hospitalData.name);
-    const isPlatformAdmin = user.role === 'platform_admin';
 
     const hospital = await Hospital.create({
       ...hospitalData,
@@ -131,34 +130,46 @@ class HospitalService {
         type: 'Point',
         coordinates: [parseFloat(hospitalData.longitude), parseFloat(hospitalData.latitude)],
       },
-      isVerified: isPlatformAdmin,
-      verificationStatus: isPlatformAdmin ? 'approved' : 'pending',
-      adminId: user._id,
+      isVerified: false,
+      verificationStatus: 'pending',
+      adminId: user.role === 'hospital_admin' ? user._id : null,
     });
 
-    await BedInventory.create({
-      hospitalId: hospital._id,
-      totalBeds: parseInt(hospitalData.totalBeds, 10) || 100,
-      occupiedBeds: parseInt(hospitalData.occupiedBeds, 10) || 60,
-      availableBeds: parseInt(hospitalData.availableBeds, 10) || 40,
-      icuBeds: { total: 20, available: 6 },
-      oxygenBeds: { total: 40, available: 15 },
-      ventilatorBeds: { total: 10, available: 3 },
-      updatedBy: user._id,
-    });
+    if (hospitalData.totalBeds !== undefined) {
+      await BedInventory.create({
+        hospitalId: hospital._id,
+        totalBeds: hospitalData.totalBeds,
+        occupiedBeds: hospitalData.occupiedBeds,
+        availableBeds: hospitalData.availableBeds,
+        updatedBy: user._id,
+      });
+    }
 
-    await EmergencyService.create({
-      hospitalId: hospital._id,
-      ambulanceNumber: hospitalData.emergencyPhone || hospitalData.phone,
-      directEmergencyHotline: hospitalData.emergencyPhone || hospitalData.phone,
-      traumaLevel: 'Level 2 Major Trauma',
-      bloodBankAvailable: true,
-      cardiacEmergencyReady: true,
-      strokeCenterReady: true,
-    });
+    if (hospitalData.hasEmergency === true) {
+      const emergencyDetails = hospitalData.emergencyDetails || {};
+      if (!emergencyDetails.ambulanceNumber || !emergencyDetails.directEmergencyHotline) {
+        throw new Error('Provide verified ambulance and emergency hotline numbers before listing emergency services.');
+      }
 
-    user.managedHospital = hospital._id;
-    await user.save();
+      await EmergencyService.create({
+        hospitalId: hospital._id,
+        ambulanceNumber: emergencyDetails.ambulanceNumber,
+        directEmergencyHotline: emergencyDetails.directEmergencyHotline,
+        ...(emergencyDetails.traumaLevel !== undefined && { traumaLevel: emergencyDetails.traumaLevel }),
+        ...(emergencyDetails.helipadAvailable !== undefined && { helipadAvailable: emergencyDetails.helipadAvailable }),
+        ...(emergencyDetails.bloodBankAvailable !== undefined && { bloodBankAvailable: emergencyDetails.bloodBankAvailable }),
+        ...(emergencyDetails.burnUnitAvailable !== undefined && { burnUnitAvailable: emergencyDetails.burnUnitAvailable }),
+        ...(emergencyDetails.strokeCenterReady !== undefined && { strokeCenterReady: emergencyDetails.strokeCenterReady }),
+        ...(emergencyDetails.cardiacEmergencyReady !== undefined && { cardiacEmergencyReady: emergencyDetails.cardiacEmergencyReady }),
+        ...(emergencyDetails.pediatricEmergencyReady !== undefined && { pediatricEmergencyReady: emergencyDetails.pediatricEmergencyReady }),
+        ...(emergencyDetails.operatingStatus !== undefined && { operatingStatus: emergencyDetails.operatingStatus }),
+      });
+    }
+
+    if (user.role === 'hospital_admin') {
+      user.managedHospital = hospital._id;
+      await user.save();
+    }
 
     await recordAuditLog({
       actorId: user._id,

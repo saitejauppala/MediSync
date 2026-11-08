@@ -143,8 +143,11 @@ export const ComparePage = () => {
                               </h3>
                             </Link>
                             <p className="text-[11px] text-text-secondary mt-0.5">
-                              {hospital.city} • {hospital.type}
+                              {hospital.city} • {hospital.type === 'Unknown' ? 'Ownership not listed' : hospital.type}
                             </p>
+                            {hospital.dataSource === 'openstreetmap' && (
+                              <span className="community-source-badge mt-1">Community listing · unverified</span>
+                            )}
                           </div>
                           <button
                             onClick={() => removeFromCompare(hospital._id)}
@@ -166,8 +169,8 @@ export const ComparePage = () => {
                     {selectedHospitals.map((h) => (
                       <td key={h._id} className="p-4 border-l border-[#303030]">
                         <span className="flex items-center gap-1.5 font-bold text-amber-400">
-                          <Star className="w-3.5 h-3.5 fill-amber-400" />
-                          {h.rating?.toFixed(1) || '4.5'}
+                          <Star className={`w-3.5 h-3.5 ${h.reviewCount ? 'fill-amber-400' : ''}`} />
+                          {h.reviewCount && Number.isFinite(h.rating) ? h.rating.toFixed(1) : 'Not rated'}
                           <span className="text-text-secondary font-normal">({h.reviewCount || 0} reviews)</span>
                         </span>
                       </td>

@@ -1,5 +1,6 @@
 const Hospital = require('../models/Hospital');
 const EmergencyService = require('../models/EmergencyService');
+const { CITY_NAME } = require('../constants');
 
 // Helper to calculate distance in km using Haversine formula
 const calculateDistanceKm = (lat1, lon1, lat2, lon2) => {
@@ -24,38 +25,79 @@ const getNearbyEmergency = async (req, res, next) => {
     const {
       longitude,
       latitude,
-      maxDistance = 30, // 30km radius for emergency
+      maxDistance = 25,
       bloodBankOnly,
       cardiacOnly,
       traumaOnly,
     } = req.query;
 
     const filter = {
-      isVerified: true,
       hasEmergency: true,
+      city: new RegExp(`^${CITY_NAME}$`, 'i'),
     };
 
-    let lng = parseFloat(longitude);
-    let lat = parseFloat(latitude);
+    if ((longitude === undefined) !== (latitude === undefined)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Provide both longitude and latitude coordinates.',
+      });
+    }
+
+    const hasCoordinates = longitude !== undefined && latitude !== undefined;
+    if (hasCoordinates && (
+      typeof longitude !== 'string' || longitude.trim() === ''
+      || typeof latitude !== 'string' || latitude.trim() === ''
+    )) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid latitude or longitude coordinate values.',
+      });
+    }
+    const lng = hasCoordinates ? Number(longitude) : NaN;
+    const lat = hasCoordinates ? Number(latitude) : NaN;
+    if (hasCoordinates && (
+      !Number.isFinite(lng) || !Number.isFinite(lat)
+      || lng < -180 || lng > 180 || lat < -90 || lat > 90
+    )) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid latitude or longitude coordinate values.',
+      });
+    }
 
     // If coordinates provided, apply $near 2dsphere query
-    if (!isNaN(lng) && !isNaN(lat)) {
+    if (hasCoordinates) {
+      const radiusKm = Number(maxDistance);
+      if (![1, 5, 10, 25, 50].includes(radiusKm)) {
+        return res.status(400).json({
+          success: false,
+          message: 'maxDistance must be one of 1, 5, 10, 25, or 50 kilometers.',
+        });
+      }
       filter.location = {
         $near: {
           $geometry: {
             type: 'Point',
             coordinates: [lng, lat],
           },
-          $maxDistance: parseFloat(maxDistance) * 1000,
+          $maxDistance: radiusKm * 1000,
         },
       };
     }
 
-    let hospitals = await Hospital.find(filter)
-      .limit(30)
-      .populate('emergencyDetails')
-      .populate('bedInventory')
-      .lean();
+    const [verifiedHospitals, communityHospitals] = await Promise.all([
+      Hospital.find({ ...filter, isVerified: true })
+        .limit(30)
+        .populate('emergencyDetails')
+        .populate('bedInventory')
+        .lean(),
+      Hospital.find({ ...filter, dataSource: 'openstreetmap', isVerified: false })
+        .limit(30)
+        .populate('emergencyDetails')
+        .populate('bedInventory')
+        .lean(),
+    ]);
+    let hospitals = [...verifiedHospitals, ...communityHospitals];
 
     // Secondary emergency filters
     if (bloodBankOnly === 'true') {
@@ -65,11 +107,11 @@ const getNearbyEmergency = async (req, res, next) => {
       hospitals = hospitals.filter((h) => h.emergencyDetails && h.emergencyDetails.cardiacEmergencyReady);
     }
     if (traumaOnly === 'true') {
-      hospitals = hospitals.filter((h) => h.emergencyDetails && h.emergencyDetails.traumaLevel.includes('Level 1'));
+      hospitals = hospitals.filter((h) => h.emergencyDetails?.traumaLevel?.includes('Level 1'));
     }
 
     // Attach distance if coordinates provided
-    if (!isNaN(lng) && !isNaN(lat)) {
+    if (hasCoordinates) {
       hospitals = hospitals.map((hosp) => {
         const [hospLng, hospLat] = hosp.location.coordinates;
         const distance = calculateDistanceKm(lat, lng, hospLat, hospLng);
@@ -78,7 +120,10 @@ const getNearbyEmergency = async (req, res, next) => {
           distance,
         };
       });
+      hospitals.sort((a, b) => a.distance - b.distance);
     }
+
+    hospitals = hospitals.slice(0, 30);
 
     res.json({
       success: true,
@@ -99,4 +144,3 @@ const getNearbyEmergency = async (req, res, next) => {
 module.exports = {
   getNearbyEmergency,
 };
-

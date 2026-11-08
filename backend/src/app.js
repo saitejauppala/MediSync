@@ -14,8 +14,12 @@ const emergencyRoutes = require('./routes/emergencyRoutes');
 const bedRoutes = require('./routes/bedRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const locationRoutes = require('./routes/locationRoutes');
 
 const app = express();
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
 
 // Security HTTP headers
 app.use(helmet({
@@ -24,24 +28,39 @@ app.use(helmet({
 
 // Cross-Origin Resource Sharing
 app.use(cors({
-  origin: '*',
+  origin: (origin, callback) => {
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean);
+
+    return callback(null, allowedOrigins.includes(origin));
+  },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
 // Request logger
 if (process.env.NODE_ENV !== 'test') {
-  app.use(morgan('dev'));
+  app.use(morgan((tokens, req, res) => [
+    tokens.method(req, res),
+    req.path,
+    tokens.status(req, res),
+    `${tokens['response-time'](req, res)} ms`,
+  ].join(' ')));
 }
 
 // Body parsers
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
-// Rate limiting (1000 requests per 15 minutes for development/testing flexibility)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 1000,
+  max: process.env.NODE_ENV === 'production' ? 300 : 1000,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -54,10 +73,9 @@ app.use('/api', limiter);
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({
-    status: 'healthy',
+    status: 'ok',
+    service: 'medisync-api',
     timestamp: new Date().toISOString(),
-    service: 'MediSync Healthcare Discovery Backend API',
-    uptime: process.uptime(),
   });
 });
 
@@ -70,6 +88,7 @@ app.use('/api/emergency', emergencyRoutes);
 app.use('/api/beds', bedRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/location', locationRoutes);
 
 // 404 handler for unknown routes
 app.use('*', (req, res) => {
@@ -83,4 +102,3 @@ app.use('*', (req, res) => {
 app.use(errorHandler);
 
 module.exports = app;
-

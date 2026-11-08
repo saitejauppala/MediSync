@@ -18,3 +18,4 @@ export const getOccupancyColor = (rate) => {
   if (rate >= 75) return 'text-amber-500';
   return 'text-emerald-500';
 };
+

@@ -168,3 +168,4 @@ export const SpecialitiesPage = () => {
 };
 
 export default SpecialitiesPage;
+

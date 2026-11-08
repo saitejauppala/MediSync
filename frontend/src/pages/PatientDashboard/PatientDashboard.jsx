@@ -40,7 +40,7 @@ export const PatientDashboard = () => {
       const [apptsRes, notifsRes, userRes] = await Promise.all([
         hospitalService.getMyAppointments(statusFilter !== 'All' ? { status: statusFilter } : {}),
         hospitalService.getNotifications(),
-        hospitalService.getHospitals({ isVerified: 'true' }),
+        hospitalService.getHospitals(),
       ]);
 
       if (apptsRes.success) {

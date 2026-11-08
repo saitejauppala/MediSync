@@ -2,22 +2,35 @@
 
 ## 1. Overview & Technology Alignment
 
-MediSync is a full-stack healthcare discovery and hospital navigation platform built strictly on the **MERN** stack:
-- **Database**: MongoDB (with MongoDB Atlas support and local resilient memory failover) + Mongoose ODM
+MediSync is a full-stack healthcare discovery and hospital navigation platform built on the **MERN** stack:
+- **Database**: MongoDB Atlas or local MongoDB + Mongoose ODM. In-memory fallback is development-only and is never used in production.
 - **Backend Framework**: Express.js REST API
 - **Frontend Framework**: React.js 18+ (Vite, Tailwind CSS, React Router v6, Redux Toolkit, Framer Motion, Lucide React)
 - **Runtime Environment**: Node.js v26 LTS
 
-## 2. Layered Backend Architecture
+## 2. Deployment and external services
+
+```mermaid
+flowchart LR
+  Browser[Desktop / Tablet / Mobile] --> Frontend[Railway frontend<br/>React + Vite static build]
+  Frontend -->|HTTPS /api| Backend[Railway backend<br/>Express REST API]
+  Backend --> Atlas[(MongoDB Atlas)]
+  Backend --> Nominatim[Nominatim<br/>rate-limited + cached]
+  Browser --> Tiles[Carto dark tiles<br/>OpenStreetMap attribution]
+```
+
+The public hospital directory is restricted to Vijayawada. GPS access is opt-in. Coordinates are used for nearby results and are not persisted as patient data. Nominatim location search is explicit (not autocomplete), bounded to the Vijayawada area, cached, and globally serialized to at most one upstream request per second per backend process.
+
+## 3. Layered Backend Architecture
 
 ```
 backend/
 ├── src/
-│   ├── config/          # Database (native + memory fallback) and Environment configuration
-│   ├── models/          # 10 Mongoose Schemas (User, Hospital, BedInventory, Appointment, etc.)
+│   ├── config/          # Database and production environment configuration
+│   ├── models/          # Mongoose schemas (User, Hospital, BedInventory, Appointment, etc.)
 │   ├── routes/          # RESTful Endpoint Definitions
 │   ├── controllers/     # Request/Response HTTP handling
-│   ├── services/        # Pure Business Logic & DB queries
+│   ├── services/        # Business logic, DB queries, and Nominatim adapter
 │   ├── middleware/      # JWT Authentication, RBAC, Centralized Error Handling, Rate Limiting
 │   ├── validators/      # Schema & Parameter input validation
 │   ├── utils/           # Haversine Geodesic Math & Helpers
@@ -35,7 +48,7 @@ backend/
 - Backed by MongoDB `2dsphere` indexes.
 - Distance calculations utilize `$near` geospatial operators and Haversine geodesic validation in kilometers.
 
-## 3. Frontend Architecture
+## 4. Frontend Architecture
 
 ```
 frontend/
@@ -49,7 +62,7 @@ frontend/
 │   └── routes/          # ProtectedRoute component with Role-Based Access Control
 ```
 
-## 4. Design System Tokens (70% Black, 20% White, 10% Red)
+## 5. Design System Tokens (70% Black, 20% White, 10% Red)
 
 - Background: `#090909`
 - Secondary Background: `#111111`

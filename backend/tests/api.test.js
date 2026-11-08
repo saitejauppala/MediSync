@@ -6,7 +6,9 @@ const User = require('../src/models/User');
 const Hospital = require('../src/models/Hospital');
 const BedInventory = require('../src/models/BedInventory');
 const EmergencyService = require('../src/models/EmergencyService');
+const Notification = require('../src/models/Notification');
 const { calculateDistanceKm } = require('../src/utils/geo');
+const { getHospitalBeds, updateHospitalBeds } = require('../src/controllers/bedController');
 
 test.before(async () => {
   await connectDB();
@@ -102,4 +104,88 @@ test('5. Geospatial Query: $near returns hospitals in ascending distance order',
   }).limit(5);
 
   assert.ok(nearby.length > 0, 'Should find nearby verified hospitals');
+});
+
+test('bed availability stays unreported until a hospital admin publishes real counts', async () => {
+  const suffix = Date.now();
+  const hospital = await Hospital.create({
+    name: 'Bed Reporting Test Hospital',
+    slug: `bed-reporting-test-${suffix}`,
+    type: 'Private',
+    address: 'Test Road',
+    city: 'Vijayawada',
+    state: 'Andhra Pradesh',
+    pincode: '520001',
+    location: { type: 'Point', coordinates: [80.648, 16.5062] },
+    phone: '+91 80000 00001',
+  });
+  const admin = await User.create({
+    name: 'Bed Reporting Admin',
+    email: `bed-admin-${suffix}@medisync.io`,
+    password: 'SecurePassword123!',
+    role: 'hospital_admin',
+    managedHospital: hospital._id,
+  });
+  hospital.adminId = admin._id;
+  await hospital.save();
+  const patient = await User.create({
+    name: 'Inventory Subscriber',
+    email: `bed-patient-${suffix}@medisync.io`,
+    password: 'SecurePassword123!',
+    role: 'patient',
+    savedHospitals: [hospital._id],
+  });
+
+  const makeResponse = () => ({
+    statusCode: 200,
+    status(code) {
+      this.statusCode = code;
+      return this;
+    },
+    json(body) {
+      this.body = body;
+      return this;
+    },
+  });
+
+  const missingInventoryResponse = makeResponse();
+  await getHospitalBeds(
+    { params: { id: hospital._id.toString() } },
+    missingInventoryResponse,
+    (error) => { throw error; }
+  );
+  assert.equal(missingInventoryResponse.statusCode, 404);
+  assert.equal(await BedInventory.countDocuments({ hospitalId: hospital._id }), 0);
+
+  const updateResponse = makeResponse();
+  await updateHospitalBeds(
+    {
+      params: { id: hospital._id.toString() },
+      user: admin,
+      ip: '127.0.0.1',
+      body: {
+        totalBeds: 80,
+        occupiedBeds: 50,
+        availableBeds: 30,
+        icuTotal: 10,
+        icuAvailable: 4,
+        oxygenTotal: 20,
+        oxygenAvailable: 8,
+        ventilatorTotal: 5,
+        ventilatorAvailable: 2,
+      },
+    },
+    updateResponse,
+    (error) => { throw error; }
+  );
+
+  assert.equal(updateResponse.body.success, true);
+  assert.equal(updateResponse.body.broadcastedTo, 1);
+  assert.match(updateResponse.body.message, /broadcast to 1 patient/);
+  const notification = await Notification.findOne({
+    userId: patient._id,
+    type: 'inventory_alert',
+  });
+  assert.ok(notification);
+  assert.match(notification.message, /30 of 80 beds/);
 });

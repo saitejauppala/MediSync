@@ -14,15 +14,11 @@ class BedService {
         throw err;
       }
 
-      bedInventory = await BedInventory.create({
-        hospitalId,
-        totalBeds: 120,
-        occupiedBeds: 75,
-        availableBeds: 45,
-        icuBeds: { total: 20, available: 6 },
-        oxygenBeds: { total: 40, available: 15 },
-        ventilatorBeds: { total: 10, available: 3 },
-      });
+      const err = new Error(hospital.dataSource === 'openstreetmap'
+        ? 'Bed availability has not been reported for this community-sourced listing.'
+        : 'Bed availability has not been reported by this hospital.');
+      err.statusCode = 404;
+      throw err;
     }
 
     const occupancyRate = bedInventory.totalBeds > 0

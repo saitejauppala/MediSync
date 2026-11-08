@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { Link } from 'react-router-dom';
-import { Navigation, Star, Bed, AlertCircle, ExternalLink } from 'lucide-react';
+import { Navigation, Star, Bed, AlertCircle, ExternalLink, Building2 } from 'lucide-react';
 
 // Custom SVG Icons for Leaflet markers
 const createCustomIcon = (isEmergency, isSelected = false) => {
@@ -39,39 +39,43 @@ const userIcon = L.divIcon({
 });
 
 // Map controller to adjust bounds dynamically
-const MapController = ({ center, hospitals, userLocation }) => {
+const MapController = ({ center, hospitals, userLocation, selectedHospitalId }) => {
   const map = useMap();
 
   useEffect(() => {
-    if (userLocation) {
-      map.setView([userLocation.latitude, userLocation.longitude], 13);
-      return;
-    }
-
-    if (hospitals && hospitals.length > 0) {
-      const validPoints = hospitals
-        .filter((h) => h.location?.coordinates?.length === 2)
+    const validPoints = (hospitals || [])
+        .filter((h) => h.location?.coordinates?.length === 2 && h.location.coordinates.every(Number.isFinite))
         .map((h) => [h.location.coordinates[1], h.location.coordinates[0]]);
 
-      if (validPoints.length > 0) {
-        if (validPoints.length === 1) {
-          map.setView(validPoints[0], 14);
-        } else {
-          const bounds = L.latLngBounds(validPoints);
-          map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
-        }
-      }
+    if (userLocation) {
+      validPoints.push([userLocation.latitude, userLocation.longitude]);
+    }
+
+    if (validPoints.length > 1) {
+      map.fitBounds(L.latLngBounds(validPoints), { padding: [50, 50], maxZoom: 14 });
+    } else if (validPoints.length === 1) {
+      map.setView(validPoints[0], userLocation ? 13 : 14);
     } else if (center) {
       map.setView(center, 12);
     }
   }, [hospitals, userLocation, map, center]);
+
+  useEffect(() => {
+    const selected = hospitals.find((hospital) => hospital._id === selectedHospitalId);
+    const coordinates = selected?.location?.coordinates;
+    if (coordinates?.length === 2 && coordinates.every(Number.isFinite)) {
+      map.flyTo([coordinates[1], coordinates[0]], Math.max(map.getZoom(), 14), {
+        duration: 0.5,
+      });
+    }
+  }, [hospitals, map, selectedHospitalId]);
 
   return null;
 };
 
 export const HospitalMap = ({
   hospitals = [],
-  center = [17.3850, 78.4867], // Default Hyderabad metro center
+  center = [16.5062, 80.6480],
   zoom = 12,
   userLocation = null,
   selectedHospitalId = null,
@@ -97,7 +101,12 @@ export const HospitalMap = ({
           maxZoom={19}
         />
 
-        <MapController center={center} hospitals={hospitals} userLocation={userLocation} />
+        <MapController
+          center={center}
+          hospitals={hospitals}
+          userLocation={userLocation}
+          selectedHospitalId={selectedHospitalId}
+        />
 
         {/* User Location Marker */}
         {userLocation && (
@@ -117,10 +126,11 @@ export const HospitalMap = ({
         {/* Hospital Markers */}
         {hospitals.map((hospital) => {
           const coords = hospital.location?.coordinates;
-          if (!coords || coords.length !== 2) return null;
+          if (!coords || coords.length !== 2 || !coords.every(Number.isFinite)) return null;
           const [lng, lat] = coords;
           const isSelected = selectedHospitalId === hospital._id;
           const icon = createCustomIcon(hospital.hasEmergency, isSelected);
+          const hasRating = hospital.reviewCount > 0 && Number.isFinite(hospital.rating);
 
           const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
 
@@ -138,17 +148,19 @@ export const HospitalMap = ({
               <Popup>
                 <div className="w-56 p-1 space-y-2 text-white">
                   <div className="h-24 w-full rounded-lg overflow-hidden bg-black/50">
-                    <img
-                      src={
-                        hospital.images?.[0] ||
-                        'https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?w=800&auto=format&fit=crop&q=80'
-                      }
-                      alt={hospital.name}
-                      className="w-full h-full object-cover"
-                    />
+                    {hospital.images?.[0] ? (
+                      <img src={hospital.images[0]} alt={`${hospital.name} facility`} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-text-secondary">
+                        <Building2 className="h-8 w-8" aria-hidden="true" />
+                      </div>
+                    )}
                   </div>
                   <div>
                     <h4 className="font-bold text-xs text-white line-clamp-1">{hospital.name}</h4>
+                    {hospital.dataSource === 'openstreetmap' && (
+                      <p className="text-[10px] text-amber-300">Community listing · unverified</p>
+                    )}
                     <p className="text-[10px] text-text-secondary line-clamp-1">
                       {hospital.locality ? `${hospital.locality}, ` : ''}{hospital.city}
                     </p>
@@ -156,8 +168,8 @@ export const HospitalMap = ({
 
                   <div className="flex items-center justify-between text-[11px] pt-1 border-t border-[#303030]">
                     <span className="flex items-center gap-1 text-amber-400 font-semibold">
-                      <Star className="w-3 h-3 fill-amber-400" />
-                      {hospital.rating?.toFixed(1) || '4.5'}
+                      <Star className={`w-3 h-3 ${hasRating ? 'fill-amber-400' : ''}`} />
+                      {hasRating ? hospital.rating.toFixed(1) : 'Not rated'}
                     </span>
                     {hospital.bedInventory && (
                       <span className="text-emerald-400 font-semibold text-[10px]">

@@ -10,6 +10,18 @@ const pointSchema = new mongoose.Schema({
   coordinates: {
     type: [Number], // [longitude, latitude]
     required: true,
+    validate: {
+      validator: (coordinates) => (
+        coordinates.length === 2
+        && Number.isFinite(coordinates[0])
+        && Number.isFinite(coordinates[1])
+        && coordinates[0] >= -180
+        && coordinates[0] <= 180
+        && coordinates[1] >= -90
+        && coordinates[1] <= 90
+      ),
+      message: 'Location coordinates must be valid [longitude, latitude] values.',
+    },
   },
 }, { _id: false });
 
@@ -29,9 +41,9 @@ const hospitalSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['Government', 'Private', 'Semi-Government', 'Autonomous'],
+      enum: ['Government', 'Private', 'Semi-Government', 'Autonomous', 'Unknown'],
       required: true,
-      default: 'Private',
+      default: 'Unknown',
       index: true,
     },
     description: {
@@ -40,12 +52,18 @@ const hospitalSchema = new mongoose.Schema(
     },
     address: {
       type: String,
-      required: [true, 'Address is required'],
+      default: '',
     },
     locality: {
       type: String,
       trim: true,
       default: '',
+    },
+    district: {
+      type: String,
+      trim: true,
+      default: '',
+      index: true,
     },
     city: {
       type: String,
@@ -60,8 +78,8 @@ const hospitalSchema = new mongoose.Schema(
     },
     pincode: {
       type: String,
-      required: [true, 'PIN Code is required'],
       trim: true,
+      default: '',
       index: true,
     },
     location: {
@@ -70,8 +88,8 @@ const hospitalSchema = new mongoose.Schema(
     },
     phone: {
       type: String,
-      required: [true, 'Contact phone is required'],
       trim: true,
+      default: '',
     },
     emergencyPhone: {
       type: String,
@@ -88,27 +106,38 @@ const hospitalSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    dataSource: {
+      type: String,
+      enum: ['hospital', 'openstreetmap'],
+      default: 'hospital',
+      index: true,
+    },
+    sourceReference: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     images: {
       type: [String],
       default: [],
     },
     operatingHours: {
       type: String,
-      default: 'Open 24/7',
+      default: 'Hours not listed',
     },
     is24x7: {
       type: Boolean,
-      default: true,
+      default: false,
       index: true,
     },
     hasEmergency: {
       type: Boolean,
-      default: true,
+      default: false,
       index: true,
     },
     facilities: {
       type: [String],
-      default: ['Ambulance', 'Pharmacy', 'Emergency Room', 'Diagnostic Lab'],
+      default: [],
     },
     specialities: {
       type: [String],
@@ -133,7 +162,7 @@ const hospitalSchema = new mongoose.Schema(
     },
     rating: {
       type: Number,
-      default: 4.5,
+      default: 0,
       min: 0,
       max: 5,
     },
@@ -170,4 +199,3 @@ hospitalSchema.virtual('emergencyDetails', {
 });
 
 module.exports = mongoose.model('Hospital', hospitalSchema);
-

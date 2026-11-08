@@ -5,7 +5,7 @@ const errorHandler = (err, req, res, next) => {
   console.error('API Error:', {
     message: err.message,
     stack: process.env.NODE_ENV === 'production' ? null : err.stack,
-    path: req.originalUrl,
+    path: req.path,
     method: req.method,
   });
 
@@ -41,9 +41,10 @@ const errorHandler = (err, req, res, next) => {
 
   res.status(err.statusCode || 500).json({
     success: false,
-    message: error.message || 'Internal Server Error',
+    message: process.env.NODE_ENV === 'production' && (err.statusCode || 500) >= 500
+      ? 'An unexpected server error occurred.'
+      : error.message || 'Internal Server Error',
   });
 };
 
 module.exports = errorHandler;
-

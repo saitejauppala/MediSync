@@ -3,23 +3,30 @@ const mongoose = require('mongoose');
 let mongod = null;
 
 const connectDB = async () => {
+  const isProduction = process.env.NODE_ENV === 'production';
+  const mongoUri = process.env.MONGODB_URI || (
+    isProduction ? undefined : 'mongodb://127.0.0.1:27017/medisync'
+  );
+
+  if (!mongoUri) {
+    throw new Error('MONGODB_URI must be configured in production.');
+  }
+
   try {
-    const mongoUri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/medisync';
-    
-    // Attempt standard connection first with 5-second timeout
-    console.log(`Connecting to MongoDB at: ${mongoUri.replace(/:[^:@]+@/, ':****@')}`);
-    
+    console.log('Connecting to MongoDB...');
+
     try {
       await mongoose.connect(mongoUri, {
-        serverSelectionTimeoutMS: 4000,
+        serverSelectionTimeoutMS: 10000,
       });
-      console.log('MongoDB connected successfully via native connection.');
+      console.log('MongoDB connected successfully.');
       return;
     } catch (connErr) {
-      console.warn('Native MongoDB connection failed or timed out:', connErr.message);
-      
-      // Fallback to in-memory MongoDB for resilient local dev/testing
-      console.log('Spinning up resilient in-memory MongoDB instance for local runtime...');
+      if (isProduction) {
+        throw connErr;
+      }
+
+      console.warn('MongoDB connection failed; starting an in-memory database for development:', connErr.message);
       const { MongoMemoryServer } = require('mongodb-memory-server');
       mongod = await MongoMemoryServer.create({
         instance: {
@@ -28,11 +35,11 @@ const connectDB = async () => {
       });
       const uri = mongod.getUri();
       await mongoose.connect(uri);
-      console.log(`In-memory MongoDB started and connected successfully at: ${uri}`);
+      console.log('In-memory MongoDB started and connected successfully.');
     }
   } catch (error) {
     console.error('Fatal MongoDB connection error:', error.message);
-    process.exit(1);
+    throw error;
   }
 };
 
@@ -48,4 +55,3 @@ const disconnectDB = async () => {
 };
 
 module.exports = { connectDB, disconnectDB };
-

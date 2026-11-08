@@ -33,7 +33,7 @@ export const EmergencyPage = () => {
     setLoading(true);
     try {
       const params = {
-        maxDistance: 35,
+        maxDistance: 25,
         bloodBankOnly: bloodBankOnly ? 'true' : undefined,
         cardiacOnly: cardiacOnly ? 'true' : undefined,
         traumaOnly: traumaOnly ? 'true' : undefined,
@@ -196,8 +196,16 @@ export const EmergencyPage = () => {
             ) : (
               hospitals.map((hospital) => {
                 const em = hospital.emergencyDetails;
-                const [lng, lat] = hospital.location?.coordinates || [78.4867, 17.3850];
-                const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+                const coordinates = hospital.location?.coordinates;
+                const hasCoordinates = Array.isArray(coordinates)
+                  && coordinates.length === 2
+                  && coordinates.every(Number.isFinite);
+                const destination = hasCoordinates
+                  ? `${coordinates[1]},${coordinates[0]}`
+                  : [hospital.name, hospital.address, hospital.locality, hospital.city, hospital.pincode]
+                    .filter(Boolean)
+                    .join(', ');
+                const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`;
 
                 return (
                   <div
@@ -223,8 +231,11 @@ export const EmergencyPage = () => {
                         </p>
                       </div>
 
+                      {hospital.dataSource === 'openstreetmap' && (
+                        <span className="community-source-badge">Community listing · unverified</span>
+                      )}
                       <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-red-950 text-red-400 border border-red-900 shrink-0">
-                        {em?.traumaLevel || 'Level 1 Trauma'}
+                        {em?.traumaLevel || 'Trauma level not listed'}
                       </span>
                     </div>
 
@@ -254,13 +265,15 @@ export const EmergencyPage = () => {
 
                     {/* Action buttons */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-[#262626]">
-                      <a
-                        href={`tel:${em?.directEmergencyHotline || hospital.emergencyPhone || hospital.phone}`}
-                        className="py-2.5 px-4 rounded-xl bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs text-center flex items-center justify-center gap-2 transition-colors shadow-md shadow-red-500/30"
-                      >
-                        <PhoneCall className="w-4 h-4 animate-bounce" />
-                        Call Emergency Desk ({em?.directEmergencyHotline || hospital.emergencyPhone || hospital.phone})
-                      </a>
+                      {(em?.directEmergencyHotline || hospital.emergencyPhone || hospital.phone) && (
+                        <a
+                          href={`tel:${(em?.directEmergencyHotline || hospital.emergencyPhone || hospital.phone).replace(/[^\d+]/g, '')}`}
+                          className="py-2.5 px-4 rounded-xl bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs text-center flex items-center justify-center gap-2 transition-colors shadow-md shadow-red-500/30"
+                        >
+                          <PhoneCall className="w-4 h-4 animate-bounce" />
+                          Call Emergency Desk ({em?.directEmergencyHotline || hospital.emergencyPhone || hospital.phone})
+                        </a>
+                      )}
                       <a
                         href={directionsUrl}
                         target="_blank"

@@ -50,12 +50,12 @@ const Navbar = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-3 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center shadow-lg shadow-red-500/20 group-hover:scale-105 transition-transform">
-              <Heart className="w-5 h-5 text-white fill-white animate-pulse" />
+            <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center transition-transform group-hover:scale-105">
+              <Heart className="w-4 h-4 text-black fill-black" />
             </div>
             <div>
               <span className="text-xl font-bold tracking-tight text-white flex items-center gap-1">
-                Medi<span className="text-red-500">Sync</span>
+                Medi<span className="text-[#a3a3a3]">Sync</span>
               </span>
               <span className="block text-[10px] text-text-secondary -mt-1 tracking-wider uppercase font-medium">
                 Healthcare Discovery
@@ -64,11 +64,11 @@ const Navbar = () => {
           </Link>
 
           {/* Desktop Nav Links */}
-          <div className="hidden md:flex items-center space-x-1 lg:space-x-2">
+          <div className="hidden lg:flex items-center gap-0.5 xl:gap-1">
             <Link
               to="/"
               className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                isActive('/') ? 'text-red-500 bg-red-950/30' : 'text-text-secondary hover:text-white hover:bg-[#171717]'
+                isActive('/') ? 'text-white bg-[#262626]' : 'text-text-secondary hover:text-white hover:bg-[#171717]'
               }`}
             >
               Home
@@ -76,8 +76,8 @@ const Navbar = () => {
 
             <Link
               to="/hospitals"
-              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
-                isActive('/hospitals') ? 'text-red-500 bg-red-950/30' : 'text-text-secondary hover:text-white hover:bg-[#171717]'
+              className={`px-2.5 py-2 rounded-lg text-xs xl:text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                isActive('/hospitals') ? 'text-white bg-[#262626]' : 'text-text-secondary hover:text-white hover:bg-[#171717]'
               }`}
             >
               <Search className="w-4 h-4" />
@@ -86,8 +86,8 @@ const Navbar = () => {
 
             <Link
               to="/specialities"
-              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
-                isActive('/specialities') ? 'text-red-500 bg-red-950/30' : 'text-text-secondary hover:text-white hover:bg-[#171717]'
+              className={`px-2.5 py-2 rounded-lg text-xs xl:text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                isActive('/specialities') ? 'text-white bg-[#262626]' : 'text-text-secondary hover:text-white hover:bg-[#171717]'
               }`}
             >
               <Layers className="w-4 h-4" />
@@ -96,20 +96,20 @@ const Navbar = () => {
 
             <Link
               to="/emergency"
-              className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-1.5 ${
+              className={`px-2.5 py-2 rounded-lg text-xs xl:text-sm font-medium transition-colors flex items-center gap-1.5 ${
                 isActive('/emergency')
-                  ? 'bg-red-500 text-white shadow-lg shadow-red-500/30'
-                  : 'text-red-400 hover:text-white hover:bg-red-950/40 border border-red-500/30'
+                  ? 'bg-[#262626] text-white'
+                  : 'text-text-secondary hover:text-white hover:bg-[#171717]'
               }`}
             >
-              <AlertTriangle className="w-4 h-4 animate-bounce" />
+              <AlertTriangle className="w-4 h-4" />
               Emergency Care
             </Link>
 
             <Link
               to="/compare"
               className={`relative px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
-                isActive('/compare') ? 'text-red-500 bg-red-950/30' : 'text-text-secondary hover:text-white hover:bg-[#171717]'
+                isActive('/compare') ? 'text-white bg-[#262626]' : 'text-text-secondary hover:text-white hover:bg-[#171717]'
               }`}
             >
               <Scale className="w-4 h-4" />
@@ -123,7 +123,7 @@ const Navbar = () => {
           </div>
 
           {/* Right Action / Auth */}
-          <div className="hidden md:flex items-center space-x-3">
+          <div className="hidden lg:flex items-center space-x-2">
             {/* Quick Demo Switcher Pill */}
             <div className="relative">
               <button
@@ -131,7 +131,7 @@ const Navbar = () => {
                 className="px-2.5 py-1.5 rounded-lg text-xs font-medium border border-border bg-[#171717] hover:bg-[#202020] text-text-secondary hover:text-white flex items-center gap-1.5 transition-colors"
                 title="Switch demo role instantly"
               >
-                <Sparkles className="w-3.5 h-3.5 text-red-400" />
+                <Sparkles className="w-3.5 h-3.5 text-[#a3a3a3]" />
                 <span>Demo Roles</span>
               </button>
 
@@ -144,21 +144,21 @@ const Navbar = () => {
                     onClick={() => handleDemoSwitch('patient')}
                     className="w-full text-left px-3 py-2 text-xs hover:bg-[#202020] flex items-center justify-between group"
                   >
-                    <span className="text-white group-hover:text-red-400">Patient User</span>
+                    <span className="text-white group-hover:text-[#a3a3a3]">Patient User</span>
                     <span className="text-[10px] text-text-secondary">Rohan</span>
                   </button>
                   <button
                     onClick={() => handleDemoSwitch('hospital_admin')}
                     className="w-full text-left px-3 py-2 text-xs hover:bg-[#202020] flex items-center justify-between group"
                   >
-                    <span className="text-white group-hover:text-red-400">Hospital Admin</span>
+                    <span className="text-white group-hover:text-[#a3a3a3]">Hospital Admin</span>
                     <span className="text-[10px] text-text-secondary">Apollo City</span>
                   </button>
                   <button
                     onClick={() => handleDemoSwitch('platform_admin')}
                     className="w-full text-left px-3 py-2 text-xs hover:bg-[#202020] flex items-center justify-between group"
                   >
-                    <span className="text-white group-hover:text-red-400">Platform Admin</span>
+                    <span className="text-white group-hover:text-[#a3a3a3]">Platform Admin</span>
                     <span className="text-[10px] text-text-secondary">Full Control</span>
                   </button>
                 </div>
@@ -171,12 +171,12 @@ const Navbar = () => {
                   onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
                   className="flex items-center space-x-2.5 px-3 py-1.5 rounded-lg border border-[#303030] bg-[#171717] hover:bg-[#202020] text-white transition-colors"
                 >
-                  <div className="w-7 h-7 rounded-full bg-red-500/20 border border-red-500/50 flex items-center justify-center text-red-400 font-bold text-xs">
+                  <div className="w-7 h-7 rounded-full bg-[#262626] border border-[#404040] flex items-center justify-center text-white font-bold text-xs">
                     {user?.name?.charAt(0) || 'U'}
                   </div>
                   <div className="text-left text-xs">
                     <p className="font-semibold text-white leading-tight">{user?.name?.split(' ')[0]}</p>
-                    <p className="text-[10px] text-red-400 capitalize">{user?.role?.replace('_', ' ')}</p>
+                    <p className="text-[10px] text-text-secondary capitalize">{user?.role?.replace('_', ' ')}</p>
                   </div>
                 </button>
 
@@ -245,7 +245,7 @@ const Navbar = () => {
                 )}
               </div>
             ) : (
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-1">
                 <Link
                   to="/login"
                   className="px-4 py-2 rounded-lg text-sm font-medium text-text-secondary hover:text-white hover:bg-[#171717] transition-colors"
@@ -254,7 +254,7 @@ const Navbar = () => {
                 </Link>
                 <Link
                   to="/register"
-                  className="px-4 py-2 rounded-lg text-sm font-medium bg-red-500 hover:bg-red-600 text-white transition-colors shadow-md shadow-red-500/20"
+                  className="px-4 py-2 rounded-lg text-sm font-medium bg-white hover:bg-[#d4d4d4] text-black transition-colors"
                 >
                   Register
                 </Link>
@@ -263,9 +263,11 @@ const Navbar = () => {
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="flex md:hidden items-center space-x-2">
+          <div className="flex lg:hidden items-center space-x-2">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+              aria-expanded={mobileMenuOpen}
               className="p-2 rounded-lg text-text-secondary hover:text-white hover:bg-[#171717]"
             >
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -276,44 +278,64 @@ const Navbar = () => {
 
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-b border-[#303030] bg-[#111111] px-4 pt-2 pb-6 space-y-3">
+        <div className="lg:hidden border-b border-[#303030] bg-[#111111] px-4 pt-2 pb-6 space-y-1">
           <Link
             to="/"
             onClick={() => setMobileMenuOpen(false)}
-            className="block px-3 py-2 rounded-lg text-sm font-medium text-white hover:bg-[#171717]"
+            className={`block px-3 py-2 rounded-lg text-sm font-medium ${isActive('/') ? 'bg-[#262626] text-white' : 'text-text-secondary hover:bg-[#171717] hover:text-white'}`}
           >
             Home
           </Link>
           <Link
             to="/hospitals"
             onClick={() => setMobileMenuOpen(false)}
-            className="block px-3 py-2 rounded-lg text-sm font-medium text-white hover:bg-[#171717]"
+            className={`block px-3 py-2 rounded-lg text-sm font-medium ${isActive('/hospitals') ? 'bg-[#262626] text-white' : 'text-text-secondary hover:bg-[#171717] hover:text-white'}`}
           >
             Explore Hospitals
           </Link>
           <Link
             to="/specialities"
             onClick={() => setMobileMenuOpen(false)}
-            className="block px-3 py-2 rounded-lg text-sm font-medium text-white hover:bg-[#171717]"
+            className={`block px-3 py-2 rounded-lg text-sm font-medium ${isActive('/specialities') ? 'bg-[#262626] text-white' : 'text-text-secondary hover:bg-[#171717] hover:text-white'}`}
           >
             Specialities
           </Link>
           <Link
             to="/emergency"
             onClick={() => setMobileMenuOpen(false)}
-            className="block px-3 py-2 rounded-lg text-sm font-semibold text-red-500 hover:bg-red-950/30"
+            className={`block px-3 py-2 rounded-lg text-sm font-medium ${isActive('/emergency') ? 'bg-[#262626] text-white' : 'text-text-secondary hover:bg-[#171717] hover:text-white'}`}
           >
             Emergency Care
           </Link>
           <Link
             to="/compare"
             onClick={() => setMobileMenuOpen(false)}
-            className="block px-3 py-2 rounded-lg text-sm font-medium text-white hover:bg-[#171717]"
+            className={`block px-3 py-2 rounded-lg text-sm font-medium ${isActive('/compare') ? 'bg-[#262626] text-white' : 'text-text-secondary hover:bg-[#171717] hover:text-white'}`}
           >
             Compare Hospitals ({selectedHospitals.length})
           </Link>
 
-          <div className="pt-2 border-t border-[#303030] space-y-2">
+          <div className="pt-3 border-t border-[#303030] space-y-2">
+            <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-text-secondary">Demo accounts</p>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                ['patient', 'Patient'],
+                ['hospital_admin', 'Hospital admin'],
+                ['platform_admin', 'Platform admin'],
+              ].map(([role, label]) => (
+                <button
+                  key={role}
+                  onClick={() => {
+                    handleDemoSwitch(role);
+                    setMobileMenuOpen(false);
+                  }}
+                  className="rounded-lg border border-[#333333] bg-[#171717] px-2 py-2 text-xs text-text-secondary transition-colors hover:bg-[#262626] hover:text-white"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="pt-2">
             {isAuthenticated ? (
               <>
                 <div className="px-3 py-2 text-xs text-text-secondary">
@@ -323,7 +345,7 @@ const Navbar = () => {
                   <Link
                     to="/patient-dashboard"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="block px-3 py-2 text-sm text-red-400"
+                    className="block px-3 py-2 text-sm text-text-secondary hover:text-white"
                   >
                     Patient Dashboard
                   </Link>
@@ -332,7 +354,7 @@ const Navbar = () => {
                   <Link
                     to="/hospital-dashboard"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="block px-3 py-2 text-sm text-red-400"
+                    className="block px-3 py-2 text-sm text-text-secondary hover:text-white"
                   >
                     Hospital Dashboard
                   </Link>
@@ -341,7 +363,7 @@ const Navbar = () => {
                   <Link
                     to="/admin"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="block px-3 py-2 text-sm text-red-400"
+                    className="block px-3 py-2 text-sm text-text-secondary hover:text-white"
                   >
                     Platform Admin
                   </Link>
@@ -351,7 +373,7 @@ const Navbar = () => {
                     handleLogout();
                     setMobileMenuOpen(false);
                   }}
-                  className="w-full text-left px-3 py-2 text-sm text-red-400"
+                  className="w-full text-left px-3 py-2 text-sm text-text-secondary hover:text-white"
                 >
                   Log Out
                 </button>
@@ -368,12 +390,13 @@ const Navbar = () => {
                 <Link
                   to="/register"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex-1 py-2 text-center rounded-lg bg-red-500 text-sm text-white font-semibold"
+                  className="flex-1 py-2 text-center rounded-lg bg-white text-sm text-black font-semibold"
                 >
                   Register
                 </Link>
               </div>
             )}
+          </div>
           </div>
         </div>
       )}

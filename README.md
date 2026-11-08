@@ -19,7 +19,7 @@ MediSync solves acute challenges in healthcare accessibility:
 
 ## 2. Technology Stack (Strictly MERN)
 
-- **Database**: MongoDB (Atlas connection string support + automatic resilient local failover) via **Mongoose**.
+- **Database**: MongoDB Atlas or local MongoDB via **Mongoose**. The in-memory fallback is development-only.
 - **Backend Framework**: **Node.js** & **Express.js** REST API with layered architecture (Routes -> Controllers -> Services -> Models).
 - **Frontend Framework**: **React.js** (Vite, Tailwind CSS, React Router v6, Redux Toolkit, Framer Motion, Lucide React).
 - **Maps**: Interactive dark-themed Leaflet & CartoDB tiles with custom medical markers and Google Maps turn-by-turn routing.
@@ -41,15 +41,9 @@ MediSync adheres strictly to a 70% Black, 20% White, and 10% Red aesthetic:
 
 ---
 
-## 4. Default Seed Accounts (One-Click Evaluator Login)
+## 4. Data and account safety
 
-| Role | Email | Password | Access Capabilities |
-|---|---|---|---|
-| **Patient** | `patient@medisync.io` | `Password123!` | Discovery, Appointment Requests, Saved Facilities |
-| **Hospital Admin** | `hospitaladmin@medisync.io` | `Password123!` | Bed Inventory Management, Appointment Approvals |
-| **Platform Admin** | `admin@medisync.io` | `Password123!` | Facility Verification, Analytics, User Management |
-
-*(The login screen also features convenient 1-click demo switcher pills for instant role toggling during evaluation)*
+The local `npm run seed` command idempotently adds the Vijayawada OpenStreetMap community directory and speciality reference data. It does not create demo users, fabricate availability, or delete existing records. Community listings are unverified and should be confirmed directly before travel.
 
 ---
 
@@ -59,12 +53,13 @@ MediSync adheres strictly to a 70% Black, 20% White, and 10% Red aesthetic:
 - Node.js v18+ (Node.js v26 LTS recommended)
 - MongoDB running locally or a MongoDB Atlas connection URI
 
-### 1. Database Seeding
-To populate verified healthcare facilities, medical departments, and demo accounts:
+### 1. Local directory import
+To add the Vijayawada OpenStreetMap community directory and speciality reference data:
 ```bash
 cd backend
 npm run seed
 ```
+The command only imports the local Vijayawada community dataset and missing speciality records; it is non-destructive and refuses to run in production.
 
 ### 2. Start the Backend API (Port 5000)
 ```bash
@@ -95,10 +90,27 @@ The test suite verifies:
 - MongoDB GeoJSON `2dsphere` coordinates storage
 - Bed inventory mathematical validation constraints
 - MongoDB `$near` geospatial query execution
+- Nominatim result normalization, caching, and coordinate validation
 
 ---
 
-## 7. Emergency Medical Notice
+### Safe legacy coordinate migration
+
+Preview legacy latitude/longitude conversion before applying it:
+
+```bash
+cd backend
+npm run migrate:hospital-locations
+npm run migrate:hospital-locations -- --apply
+```
+
+Set `MONGODB_URI` explicitly. The default run is dry-run; `--apply` only adds valid GeoJSON points and the geospatial index, without deleting records.
+
+## 7. Railway deployment
+
+Railway deployment uses independent `frontend` and `backend` services and MongoDB Atlas. See [docs/RAILWAY_DEPLOYMENT.md](./docs/RAILWAY_DEPLOYMENT.md) for root directories, variables, health checks, verification, and rollback steps. No deployment is performed by these local commands.
+
+## 8. Emergency Medical Notice
 
 > **Important Clinical Disclaimer**: MediSync is an informational discovery platform, not an emergency response dispatch service. In critical emergencies, contact national emergency services immediately:
 > - **National Emergency**: Dial `112`
