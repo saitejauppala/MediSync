@@ -1,0 +1,23 @@
+{
+  "name": "medisync",
+  "version": "1.0.0",
+  "description": "MediSync - Full-Stack Healthcare Discovery & Hospital Navigation Platform (MERN)",
+  "scripts": {
+    "start:backend": "cd backend && node src/server.js",
+    "start:frontend": "cd frontend && npm run dev",
+    "seed": "cd backend && node src/scripts/seed.js",
+    "test:backend": "cd backend && npm test",
+    "build:frontend": "cd frontend && npm run build"
+  },
+  "keywords": [
+    "mern",
+    "healthcare",
+    "hospital-discovery",
+    "mongodb",
+    "express",
+    "react",
+    "nodejs"
+  ],
+  "author": "MediSync Team",
+  "license": "MIT"
+}
