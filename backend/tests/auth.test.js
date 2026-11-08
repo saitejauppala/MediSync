@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const mongoose = require('mongoose');
 const { MongoMemoryServer } = require('mongodb-memory-server');
+const { seedDemoUsers } = require('../src/scripts/seedDemoUsers');
 
 process.env.NODE_ENV = 'test';
 process.env.FRONTEND_URL = 'https://energetic-patience-production-3e23.up.railway.app';
@@ -127,6 +128,131 @@ test('patient and hospital administrator registration and login use the mounted 
     }),
   });
   assert.equal(invalidLogin.status, 401);
+
+  const missingUserLogin = await fetch(`${baseUrl}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: `missing-${suffix}@medisync.test`,
+      password: patientCredentials.password,
+    }),
+  });
+  assert.equal(missingUserLogin.status, 401);
+});
+
+test('production demo seeding creates correct roles and never resets existing passwords', async () => {
+  const seedPasswords = {
+    MEDISYNC_DEMO_PATIENT_PASSWORD: 'PatientDemoPassword-2026-unique',
+    MEDISYNC_DEMO_HOSPITAL_ADMIN_PASSWORD: 'HospitalDemoPassword-2026-unique',
+    MEDISYNC_DEMO_PLATFORM_ADMIN_PASSWORD: 'PlatformDemoPassword-2026-unique',
+  };
+  const existingPatientPassword = 'ExistingPatientPassword-2026';
+  await User.create({
+    name: 'Existing Demo Patient',
+    email: 'patient@medisync.io',
+    password: existingPatientPassword,
+    role: 'patient',
+  });
+
+  const firstRun = await seedDemoUsers({ env: seedPasswords });
+  assert.deepEqual(firstRun.map(({ status }) => status), ['password-mismatch', 'created', 'created']);
+  assert.deepEqual(firstRun.map(({ role }) => role), ['patient', 'hospital_admin', 'platform_admin']);
+
+  const repeatRun = await seedDemoUsers({ env: seedPasswords });
+  assert.deepEqual(repeatRun.map(({ status }) => status), ['password-mismatch', 'unchanged', 'unchanged']);
+
+  const secondRun = await seedDemoUsers({
+    env: {
+      MEDISYNC_DEMO_PATIENT_PASSWORD: 'ChangedPatientDemoPassword-2026',
+      MEDISYNC_DEMO_HOSPITAL_ADMIN_PASSWORD: 'ChangedHospitalDemoPassword-2026',
+      MEDISYNC_DEMO_PLATFORM_ADMIN_PASSWORD: 'ChangedPlatformDemoPassword-2026',
+    },
+  });
+  assert.deepEqual(secondRun.map(({ status }) => status), [
+    'password-mismatch',
+    'password-mismatch',
+    'password-mismatch',
+  ]);
+
+  const patient = await User.findOne({ email: 'patient@medisync.io' }).select('+password');
+  assert.equal(await patient.comparePassword(existingPatientPassword), true);
+  assert.equal(await patient.comparePassword(seedPasswords.MEDISYNC_DEMO_PATIENT_PASSWORD), false);
+
+  const hospitalAdmin = await User.findOne({ email: 'hospitaladmin@medisync.io' }).select('+password');
+  assert.equal(hospitalAdmin.role, 'hospital_admin');
+  assert.equal(await hospitalAdmin.comparePassword(seedPasswords.MEDISYNC_DEMO_HOSPITAL_ADMIN_PASSWORD), true);
+
+  const platformAdmin = await User.findOne({ email: 'admin@medisync.io' }).select('+password');
+  assert.equal(platformAdmin.role, 'platform_admin');
+  assert.equal(await platformAdmin.comparePassword(seedPasswords.MEDISYNC_DEMO_PLATFORM_ADMIN_PASSWORD), true);
+
+  const demoCredentials = [
+    { email: 'patient@medisync.io', password: existingPatientPassword, role: 'patient' },
+    {
+      email: 'hospitaladmin@medisync.io',
+      password: seedPasswords.MEDISYNC_DEMO_HOSPITAL_ADMIN_PASSWORD,
+      role: 'hospital_admin',
+    },
+    {
+      email: 'admin@medisync.io',
+      password: seedPasswords.MEDISYNC_DEMO_PLATFORM_ADMIN_PASSWORD,
+      role: 'platform_admin',
+    },
+  ];
+
+  for (const credentials of demoCredentials) {
+    const login = await fetch(`${baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(credentials),
+    });
+    assert.equal(login.status, 200);
+    const session = await login.json();
+    assert.equal(session.user.role, credentials.role);
+
+    const profile = await fetch(`${baseUrl}/api/auth/me`, {
+      headers: { Authorization: `Bearer ${session.token}` },
+    });
+    assert.equal(profile.status, 200);
+    assert.equal((await profile.json()).user.role, credentials.role);
+  }
+});
+
+test('demo seeding rejects incorrect existing roles without modifying the account', async () => {
+  const account = await User.findOne({ email: 'hospitaladmin@medisync.io' });
+  account.role = 'patient';
+  await account.save();
+
+  await assert.rejects(
+    seedDemoUsers({
+      env: {
+        MEDISYNC_DEMO_PATIENT_PASSWORD: 'PatientDemoPassword-2026-unique',
+        MEDISYNC_DEMO_HOSPITAL_ADMIN_PASSWORD: 'HospitalDemoPassword-2026-unique',
+        MEDISYNC_DEMO_PLATFORM_ADMIN_PASSWORD: 'PlatformDemoPassword-2026-unique',
+      },
+    }),
+    /expected hospital_admin/
+  );
+
+  const unchangedAccount = await User.findOne({ email: 'hospitaladmin@medisync.io' });
+  assert.equal(unchangedAccount.role, 'patient');
+});
+
+test('demo seeding rejects missing or reused passwords before creating users', async () => {
+  await assert.rejects(
+    seedDemoUsers({ env: {} }),
+    /MEDISYNC_DEMO_PATIENT_PASSWORD must be set/
+  );
+  await assert.rejects(
+    seedDemoUsers({
+      env: {
+        MEDISYNC_DEMO_PATIENT_PASSWORD: 'RepeatedDemoPassword-2026',
+        MEDISYNC_DEMO_HOSPITAL_ADMIN_PASSWORD: 'RepeatedDemoPassword-2026',
+        MEDISYNC_DEMO_PLATFORM_ADMIN_PASSWORD: 'PlatformDemoPassword-2026-unique',
+      },
+    }),
+    /different password/
+  );
 });
 
 test('protected profile requires a valid token and the admin route enforces roles', async () => {

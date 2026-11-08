@@ -18,10 +18,12 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCompare } from '../../context/CompareContext';
+import { useToast } from '../../context/ToastContext';
 
 const Navbar = () => {
   const { user, isAuthenticated, logout, demoLogin } = useAuth();
   const { selectedHospitals } = useCompare();
+  const notify = useToast();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [demoMenuOpen, setDemoMenuOpen] = useState(false);
@@ -37,11 +39,15 @@ const Navbar = () => {
   };
 
   const handleDemoSwitch = async (role) => {
-    await demoLogin(role);
-    setDemoMenuOpen(false);
-    if (role === 'platform_admin') navigate('/admin');
-    else if (role === 'hospital_admin') navigate('/hospital-dashboard');
-    else navigate('/patient-dashboard');
+    try {
+      await demoLogin(role);
+      setDemoMenuOpen(false);
+      if (role === 'platform_admin') navigate('/admin');
+      else if (role === 'hospital_admin') navigate('/hospital-dashboard');
+      else navigate('/patient-dashboard');
+    } catch (error) {
+      notify(error.response?.data?.message || error.message || 'Demo login failed.', 'error');
+    }
   };
 
   return (

@@ -55,6 +55,19 @@ For the currently deployed MediSync services, configure:
 
 Keep existing backend secrets and database/geocoding variables unchanged when applying these values.
 
+### Optional production demo accounts
+
+The normal seed command does not create user accounts. To create the three fixed evaluator accounts without overwriting existing users, configure these unique random passwords as backend Railway variables:
+
+- `MEDISYNC_DEMO_PATIENT_PASSWORD`
+- `MEDISYNC_DEMO_HOSPITAL_ADMIN_PASSWORD`
+- `MEDISYNC_DEMO_PLATFORM_ADMIN_PASSWORD`
+- `MEDISYNC_ENABLE_DEMO_USER_SEED=true` (temporary; remove after the one-off run)
+
+Run `npm run seed:demo-users` once from the backend service environment with `NODE_ENV=production` and the existing production `MONGODB_URI`. The script creates only missing accounts; existing accounts and passwords are never modified. Existing role mismatches stop the seed for manual review. If a configured password does not match an existing account, the account is left untouched, the mismatch is reported without the password, and the command exits unsuccessfully; use the normal secure password recovery/admin process rather than reseeding it. Do not run the general `npm run seed` against production.
+
+To keep one-click demo login working in the frontend, set `VITE_DEMO_PATIENT_PASSWORD`, `VITE_DEMO_HOSPITAL_ADMIN_PASSWORD`, and `VITE_DEMO_PLATFORM_ADMIN_PASSWORD` to the corresponding evaluator passwords before building the frontend. **Vite embeds these values in public browser assets.** Anyone can inspect and use them; the platform-admin demo therefore grants the public platform-admin role. Use only disposable evaluator accounts and demo data—never real user information or production operational data. If public admin access is not intended, leave the platform-admin frontend variable unset; regular administrator login remains available.
+
 ## 4. Verify deployment
 
 1. Confirm `https://<backend-domain>/api/health` returns `status: "ok"`, `service: "medisync-api"`, and an ISO timestamp.

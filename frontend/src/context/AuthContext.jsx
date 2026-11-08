@@ -98,14 +98,24 @@ export const AuthProvider = ({ children }) => {
   // Demo accounts quick-switch helper
   const demoLogin = async (role) => {
     const credentials = {
-      patient: { email: 'patient@medisync.io', password: 'Password123!' },
-      hospital_admin: { email: 'hospitaladmin@medisync.io', password: 'Password123!' },
-      platform_admin: { email: 'admin@medisync.io', password: 'Password123!' },
+      patient: {
+        email: 'patient@medisync.io',
+        password: import.meta.env.VITE_DEMO_PATIENT_PASSWORD,
+      },
+      hospital_admin: {
+        email: 'hospitaladmin@medisync.io',
+        password: import.meta.env.VITE_DEMO_HOSPITAL_ADMIN_PASSWORD,
+      },
+      platform_admin: {
+        email: 'admin@medisync.io',
+        password: import.meta.env.VITE_DEMO_PLATFORM_ADMIN_PASSWORD,
+      },
     };
 
-    if (credentials[role]) {
-      return login(credentials[role].email, credentials[role].password);
-    }
+    const account = credentials[role];
+    if (!account) throw new Error('Unsupported demo account role.');
+    if (!account.password) throw new Error('Demo login is not configured for this role.');
+    return login(account.email, account.password);
   };
 
   const value = {
@@ -132,4 +142,3 @@ export const useAuth = () => {
   }
   return context;
 };
-

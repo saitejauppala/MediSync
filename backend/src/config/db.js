@@ -38,7 +38,11 @@ const connectDB = async () => {
       console.log('In-memory MongoDB started and connected successfully.');
     }
   } catch (error) {
-    console.error('Fatal MongoDB connection error:', error.message);
+    if (isProduction) {
+      console.error('Fatal MongoDB connection error. Check production database configuration and Atlas connectivity.');
+    } else {
+      console.error('Fatal MongoDB connection error:', error.message);
+    }
     throw error;
   }
 };
@@ -50,7 +54,11 @@ const disconnectDB = async () => {
       await mongod.stop();
     }
   } catch (error) {
-    console.error('Error disconnecting MongoDB:', error);
+    if (process.env.NODE_ENV === 'production') {
+      console.error('Error disconnecting from MongoDB.');
+    } else {
+      console.error('Error disconnecting MongoDB:', error.message);
+    }
   }
 };
 

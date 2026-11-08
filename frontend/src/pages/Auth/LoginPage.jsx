@@ -41,7 +41,7 @@ export const LoginPage = () => {
       else if (role === 'hospital_admin') navigate('/hospital-dashboard');
       else navigate('/patient-dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Demo login failed.');
+      setError(err.response?.data?.message || err.message || 'Demo login failed.');
     } finally {
       setLoading(false);
     }
@@ -163,4 +163,3 @@ export const LoginPage = () => {
 };
 
 export default LoginPage;
-

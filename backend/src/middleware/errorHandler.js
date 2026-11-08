@@ -2,12 +2,18 @@ const errorHandler = (err, req, res, next) => {
   let error = { ...err };
   error.message = err.message;
 
-  console.error('API Error:', {
-    message: err.message,
-    stack: process.env.NODE_ENV === 'production' ? null : err.stack,
-    path: req.path,
-    method: req.method,
-  });
+  console.error('API Error:', process.env.NODE_ENV === 'production'
+    ? {
+      name: err.name,
+      path: req.path,
+      method: req.method,
+    }
+    : {
+      message: err.message,
+      stack: err.stack,
+      path: req.path,
+      method: req.method,
+    });
 
   // Mongoose bad ObjectId
   if (err.name === 'CastError') {

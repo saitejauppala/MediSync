@@ -22,9 +22,12 @@ const recordAuditLog = async ({
       ipAddress,
     });
   } catch (error) {
-    console.error('Failed to write audit log:', error.message);
+    if (process.env.NODE_ENV === 'production') {
+      console.error('Failed to write audit log.');
+    } else {
+      console.error('Failed to write audit log:', error.message);
+    }
   }
 };
 
 module.exports = { recordAuditLog };
-

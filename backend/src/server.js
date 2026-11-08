@@ -28,12 +28,20 @@ const startServer = async () => {
   const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`MediSync API running on port ${PORT} [${process.env.NODE_ENV || 'development'}]`);
   }).on('error', (error) => {
-    console.error('Failed to start MediSync API:', error.message);
+    if (process.env.NODE_ENV === 'production') {
+      console.error('Failed to start MediSync API.');
+    } else {
+      console.error('Failed to start MediSync API:', error.message);
+    }
     process.exitCode = 1;
   });
 
   process.on('unhandledRejection', (err) => {
-    console.error(`Unhandled Rejection: ${err.message}`);
+    if (process.env.NODE_ENV === 'production') {
+      console.error('Unhandled API rejection.');
+    } else {
+      console.error(`Unhandled Rejection: ${err.message}`);
+    }
   });
 
   return server;

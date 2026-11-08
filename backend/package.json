@@ -10,6 +10,7 @@
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "seed": "node src/scripts/seed.js",
+    "seed:demo-users": "node src/scripts/seedDemoUsers.js",
     "migrate:hospital-locations": "node src/scripts/migrateHospitalLocations.js",
     "test": "node --test"
   },
