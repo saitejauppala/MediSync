@@ -40,7 +40,7 @@ Railway supplies `PORT`; the server binds to `0.0.0.0`. Production startup fails
   - Build: `npm ci && npm run build`
   - Start: `npm run start`
   - Health check: `/`
-- Set `VITE_API_URL` before the build to the backend HTTPS origin, without an `/api` suffix (for example, `https://<backend-public-domain>`). The API client appends and normalizes `/api`.
+- Set `VITE_API_URL` before the build to the backend HTTPS API base URL (for example, `https://<backend-public-domain>/api`). The API client normalizes the base URL, so either the backend origin or an origin already ending in `/api` results in exactly one `/api` prefix.
 - Generate a frontend Railway public domain.
 - Set backend `FRONTEND_URL` to the exact frontend HTTPS origin (for example, `https://energetic-patience-production-3e23.up.railway.app`) and redeploy the backend if needed. Bearer-token authentication does not use cross-origin cookies, so credentialed CORS requests are not enabled.
 
@@ -50,7 +50,7 @@ For the currently deployed MediSync services, configure:
 
 | Service | Variable | Value |
 |---|---|---|
-| Frontend | `VITE_API_URL` | `https://medisync-production-d996.up.railway.app` |
+| Frontend | `VITE_API_URL` | `https://medisync-production-d996.up.railway.app/api` |
 | Backend | `FRONTEND_URL` | `https://energetic-patience-production-3e23.up.railway.app` |
 
 Keep existing backend secrets and database/geocoding variables unchanged when applying these values.

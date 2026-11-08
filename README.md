@@ -40,7 +40,7 @@ Backend service:
 - `NOMINATIM_CONTACT_EMAIL=<monitoring contact email>`
 
 Frontend service:
-- `VITE_API_URL=https://<backend-domain>` (backend origin; the API client adds `/api`)
+- `VITE_API_URL=https://<backend-domain>/api` (the API client normalizes the prefix to prevent duplication)
 
 ## Local development
 

@@ -62,7 +62,7 @@ docs/
 
 ## Railway deployment requirements
 
-Deploy separate Railway services with `/frontend` and `/backend` as their respective root directories. MongoDB remains external in Atlas. Configure `MONGODB_URI`, a strong `JWT_SECRET`, exact `FRONTEND_URL`, and a real monitored `NOMINATIM_CONTACT_EMAIL` on the backend; set `VITE_API_URL` to the backend HTTPS API origin before building the frontend. Railway supplies `PORT`; both services bind to `0.0.0.0`.
+Deploy separate Railway services with `/frontend` and `/backend` as their respective root directories. MongoDB remains external in Atlas. Configure `MONGODB_URI`, a strong `JWT_SECRET`, exact `FRONTEND_URL`, and a real monitored `NOMINATIM_CONTACT_EMAIL` on the backend; set `VITE_API_URL` to the backend HTTPS API base URL (including `/api`) before building the frontend. Railway supplies `PORT`; both services bind to `0.0.0.0`.
 
 The backend health check is `/api/health`; the frontend health check is `/`. Detailed service setup, smoke tests, Atlas networking guidance, and rollback steps are in [RAILWAY_DEPLOYMENT.md](./RAILWAY_DEPLOYMENT.md). No Railway or Atlas deployment was performed.
 
